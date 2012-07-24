@@ -2,7 +2,7 @@ DEPS = testLists.o
 BIN  = lists
 
 CC=gcc
-CFLAGS = -O -Wall -Werror -g
+CFLAGS = -Wall -Werror -g
 
 all: ${BIN}
 	./${BIN}
@@ -10,5 +10,5 @@ all: ${BIN}
 ${BIN}: ${BIN}.o ${DEPS}
 
 clean:
-	rm ${BIN} ${DEPS}
+	rm ${BIN} ${BIN}.o ${DEPS}
 .PHONY: all clean
