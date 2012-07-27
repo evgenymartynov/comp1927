@@ -1,2 +1,2 @@
 all:
-	make -C lab02
+	make -C lab03
