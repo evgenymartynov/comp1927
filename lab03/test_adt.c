@@ -1,80 +1,118 @@
+// Author: evgenym
+// Tutorial: Tue 11 Bell
+// Date: 27 Jul 2012
+// Summary: Tests for Lab03 lists ADT.
+
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 #include "Item.h"
 #include "adt.h"
 
+static void testLists(void);
+// Exposed by my adt.c
 void LISTprint(void);
-int main(void) {
 
-  Item item0;
-  Item item1;
-  Item item2;
 
-  setbuf(stdout, NULL);
+int main(int argc, char *argv[]) {
+    testLists();
 
-  item0 = 10;
-  item1 = 11;
-  item2 = 12;
+    return EXIT_SUCCESS;
+}
 
-  printf("LIST init()\n");
-  LISTinit();
-  printf("LIST is empty\n");
-  LISTprint();
-  assert(LISTempty() == 1);
-  printf("passed!\n\n");
 
-  printf("LIST after(10), LIST after(12), LIST before(11)\n");
-  LISTafter(item0);
-  LISTafter(item2);
-  LISTbefore(item1);
-  printf("theList: 10 -> [11] -> 12 -> NULL\n");
-  printf("LIST current item is 11\n");
-  LISTprint();
-  assert(LISTcurrent() == item1);
-  printf("passed!\n\n");
+static void testLists(void) {
+    Item zeroth = 0;
+    Item first  = 7;
+    Item second = 13;
+    Item third  = 42;
+    Item fourth = 50;
 
-  printf("LIST move back 1\n");
-  assert(LISTmove(-1) == 1);
-  LISTprint();
-  printf("theList: [10] -> 11 -> 12 -> NULL\n");
-  printf("LIST current item is 10\n");
-  assert(LISTcurrent() == item0);
-  printf("passed!\n\n");
+    printf("Testing initialisation\n");
+        printf("  calling LISTinit()\n");
+        LISTinit();
+        printf("  ensure new list is empty\n");
+        assert(LISTempty());
+    printf("Pass: initialisation looks sane\n");
 
-  printf("LIST move forward 2\n");
-  LISTprint();
-  assert(LISTmove(2) == 1);
-  printf("theList: 10 -> 11 -> [12] -> NULL\n");
-  printf("LIST current item is 12\n");
-  LISTprint();
-  assert(LISTcurrent() == item2);
-  printf("passed!\n\n");
+    printf("Inserting initial elements\n");
+        printf("  insert %d\n", first);
+        LISTafter(first);
+        assert(LISTcurrent() == first);
+        assert(!LISTempty());
+        printf("  insert %d\n", second);
+        LISTafter(second);
+        assert(LISTcurrent() == second);
+        assert(!LISTempty());
+        printf("  insert %d\n", third);
+        LISTafter(third);
+        assert(LISTcurrent() == third);
+        assert(!LISTempty());
+    printf("Pass: inserted items look sane\n");
 
-  printf("LIST delete last item\n");
-  LISTdelete();
-  printf("theList: 10 -> [11] -> NULL\n");
-  LISTprint();
-  assert(LISTcurrent() == item1);
-  printf("passed!\n\n");
+    printf("Test moving and querying\n");
+        printf("  move left 1\n");
+        assert(!LISTmove(-1));
+        assert(LISTcurrent() == second);
+        printf("  move left 1\n");
+        assert(LISTmove(-1));
+        assert(LISTcurrent() == first);
+        printf("  move right 2\n");
+        assert(LISTmove(2));
+        assert(LISTcurrent() == third);
+        printf("  move left 2\n");
+        assert(LISTmove(-2));
+        assert(LISTcurrent() == first);
+    printf("Pass: moving seems to work\n");
 
-  printf("LIST move back 1\n");
-  LISTprint();
-  assert(LISTmove(-1) == 1);
-  printf("theList: [10] -> 11 -> NULL\n");
-  printf("LIST delete first item\n");
-  LISTdelete();
-  printf("theList: [11] -> NULL\n");
-  LISTprint();
-  assert(LISTcurrent() == item1);
-  printf("passed!\n\n");
+    printf("Testing edge insertion\n");
+        printf("  insert %d\n", zeroth);
+        LISTbefore(zeroth);
+        assert(LISTcurrent() == zeroth);
+        printf("  move to right end\n");
+        assert(LISTmove(3));
+        assert(LISTcurrent() == third);
+        printf("  insert %d\n", fourth);
+        LISTafter(fourth);
+        assert(LISTcurrent() == fourth);
+    printf("Pass: edge insertion seems to work\n");
 
-  printf("LIST delete last item\n");
-  LISTdelete();
-  printf("LIST is empty\n");
-  LISTprint();
-  assert(LISTempty() == 1);
-  printf("passed!\n\n");
+    printf("Testing middle insertion\n");
+        printf("  move left 2\n");
+        assert(!LISTmove(-2));
+        assert(LISTcurrent() == second);
+        printf("  insert -5 left\n");
+        LISTbefore(-5);
+        assert(LISTcurrent() == -5);
+        printf("  insert 123 right\n");
+        LISTafter(123);
+        assert(LISTcurrent() == 123);
+    printf("Pass: middle insertion seems to work\n");
 
-  printf("You are AWESOME! You passed all the adt tests.\n");
-  return 0;
+    printf("Testing deletion\n");
+        printf("  make sure list isn't empty\n");
+        assert(!LISTempty());
+        printf("  deleting 123, moving current to -5\n");
+        assert(LISTcurrent() == 123);
+        LISTdelete();
+        assert(LISTcurrent() == -5);
+        printf("  ensure still not empty\n");
+        assert(!LISTempty());
+        printf("  delete -5, leaving zeroth-[first]-...-fourth\n");
+        LISTdelete();
+        assert(LISTcurrent() == first);
+        printf("  delete that\n");
+        LISTdelete();
+        assert(LISTcurrent() == zeroth);
+        printf("  delete the rest, checking emptiness\n");
+        assert(!LISTempty() && LISTcurrent() == zeroth);
+        LISTdelete();
+        assert(!LISTempty() && LISTcurrent() == second);
+        LISTdelete();
+        assert(!LISTempty() && LISTcurrent() == third);
+        LISTdelete();
+        assert(!LISTempty() && LISTcurrent() == fourth);
+        LISTdelete();
+        assert(LISTempty());
+    printf("Pass: deletion seems to work\n");
 }
