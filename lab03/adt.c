@@ -5,17 +5,27 @@
 // Summary: Implementation of a singleton doubly-linked list.
 
 // Details:
-// We do not have any dummy nodes as sentinels on the ends; we use NULL.
-// We also try to not raise errors in case of abuse.
-// We have an invariant that currentNode is NULL iff list is empty.
+// 1.   We use a single dummy node as a sentinel on both ends.
+//      List can thus be deemed circular.
+// 2.   We also try to not raise errors in case of abuse, and recover if
+//      possible.
+// 3.   We have an invariant that currentNode is the dummy iff list is
+//      empty.
+//      Otherwise, current node points to some real node. Never NULL.
+// 4.   As such, NULL never occurs in our pointers.
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include "Item.h"
 
+// Bools
 #define TRUE  1
 #define FALSE 0
+
+// Where to insert a node relative to current node.
+#define BEFORE -1
+#define AFTER  1
 
 typedef struct _node *ListNode;
 
@@ -28,12 +38,18 @@ typedef struct _node {
 // Local prototypes
 static ListNode newNode(Item value);
 static void disposeNode(ListNode node);
-static void moveForward(int n);
-static void moveBack(int n);
+static int isEdgeNode(ListNode node);
+static void moveForward(int numSteps);
+static void moveBack(int numSteps);
+static void insertNode(ListNode prev, ListNode newNode, ListNode next);
+static void insertNodeRelativeToCurrent(Item newItem, int where);
 
 // The list instance. We only need to know the current node as far as
 // this interface goes.
 static ListNode currentNode;
+
+// This is the special edge node.
+static ListNode dummyNode;
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -44,40 +60,33 @@ static ListNode currentNode;
 
 // Initialise the list.
 void LISTinit() {
-    // Not required, but just to make sure.
-    currentNode = NULL;
+    currentNode = dummyNode = newNode(0);
+    // Short-circuit the list.
+    dummyNode->prev = dummyNode->next = dummyNode;
 }
 
 // Test if the list is empty.
 int LISTempty() {
-    return currentNode == NULL;
+    return currentNode == dummyNode;
 }
 
 // Move n steps forward along the linked list.
 // Returns 1 if the new element is a boundary element, 0 otherwise.
-int LISTmove(int n) {
-    int isBoundary = FALSE;
-
-    if (LISTempty()) {
-        // Catch out empty-list case.
-        isBoundary = TRUE;
-    } else {
-        // List is not empty.
-        if (n > 0) {
-            moveForward(n);
-        } else if (n < 0) {
-            moveBack(-n);
+int LISTmove(int numSteps) {
+    // Watch out for the empty-list case.
+    if (!LISTempty()) {
+        if (numSteps > 0) {
+            moveForward(numSteps);
+        } else if (numSteps < 0) {
+            moveBack(-numSteps);
         }
-
-        isBoundary = ( currentNode->prev == NULL || \
-                       currentNode->next == NULL    );
     }
 
-    return isBoundary;
+    return isEdgeNode(currentNode);
 }
 
 // Get element at current position.
-// Here, we freak out if the list is empty.
+// Here, we cannot recover if the list is empty.
 Item LISTcurrent() {
     assert(!LISTempty());
 
@@ -87,89 +96,47 @@ Item LISTcurrent() {
 // Insert a node with a given value BEFORE the current node, and make it
 // current.
 void LISTbefore(Item newItem) {
-    ListNode node = newNode(newItem);
-
-    if (LISTempty()) {
-        // An empty list is a special case, again.
-        node->prev = NULL;
-        node->next = NULL;
-    } else {
-        // Non-empty list...
-        node->prev = currentNode->prev;
-        node->next = currentNode;
-
-        if (currentNode->prev != NULL) {
-            currentNode->prev->next = node;
-        }
-
-        currentNode->prev = node;
-    }
-
-    // As per the spec, the inserted node becomes current.
-    currentNode = node;
+    insertNodeRelativeToCurrent(newItem, BEFORE);
 }
 
 // Insert a node with a given value AFTER the current node, and make it
 // current.
-// Note the strong similarity to LISTbefore. Can't really do much about
-// it, unfortunately.
 void LISTafter(Item newItem) {
-    ListNode node = newNode(newItem);
-
-    if (LISTempty()) {
-        // An empty list is a special case, again.
-        node->prev = NULL;
-        node->next = NULL;
-    } else {
-        // Non-empty list...
-        node->prev = currentNode;
-        node->next = currentNode->next;
-
-        if (currentNode->next != NULL) {
-            currentNode->next->prev = node;
-        }
-
-        currentNode->next = node;
-    }
-
-    // As per the spec, the inserted node becomes current.
-    currentNode = node;
+    insertNodeRelativeToCurrent(newItem, AFTER);
 }
 
 // Delete the current node and make previous one current.
 // If first node is being deleted, then point to the next node.
 // ...wait, ITEM? Fine, I will simply return the value of deleted node.
+// The return value is thus unspecified for an empty list.
 Item LISTdelete() {
-    Item deletedValue = 0;
+    Item deletedValue = currentNode->value;
 
     if (!LISTempty()) {
-        // Work out the new current node.
+        // Here, we work out the new current node.
         ListNode newCurrent;
 
-        if (currentNode->prev == NULL) {
-            // This is the first node.
-            newCurrent = currentNode->next;
+        // Because we have dummy nodes, we can delete the node as if it
+        // were in the middle of the list (not the beginning), and only
+        // then adjust the new position.
 
-            // Update the links if there are elements left.
-            if (newCurrent) {
-                newCurrent->prev = NULL;
-            }
-        } else {
-            // Not the first node
-            newCurrent = currentNode->prev;
+        ListNode prevNode = currentNode->prev;
+        ListNode nextNode = currentNode->next;
 
-            // Point next node to new node
-            if (currentNode->next != NULL) {
-                currentNode->next->prev = newCurrent;
-            }
+        // The former previous node becomes the new current node.
+        newCurrent = prevNode;
 
-            // Point new node to next node
-            if (newCurrent != NULL) {
-                newCurrent->next = currentNode->next;
-            }
+        // which is then followed by the former next node and preceded
+        // by the former previous node.
+        nextNode->prev = prevNode;
+        prevNode->next = nextNode;
+
+        // If we've just deleted the first node...
+        if (newCurrent == dummyNode) {
+            // ...advance the list one step forward.
+            newCurrent = newCurrent->next;
         }
 
-        deletedValue = currentNode->value;
         disposeNode(currentNode);
         currentNode = newCurrent;
     }
@@ -180,19 +147,19 @@ Item LISTdelete() {
 // This is a debug function, ignore it. Not part of the interface, but
 // used by the tester.
 void LISTprint(void) {
-    ListNode start = currentNode;
-    while (start != NULL && start->prev != NULL) {
-        start = start->prev;
-    }
+    ListNode curr = dummyNode;
 
-    for (; start != NULL; start = start->next) {
-        if (start == currentNode) {
-            printf("[%d] -> ", start->value);
+    printf("D -> ");
+    while (curr->next != dummyNode) {
+        curr = curr->next;
+
+        if (curr == currentNode) {
+            printf("[%d] -> ", curr->value);
         } else {
-            printf("%d -> ", start->value);
+            printf("%d -> ", curr->value);
         }
     }
-    printf("NULL\n");
+    printf("D\n");
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -214,23 +181,59 @@ static void disposeNode(ListNode node) {
     free(node);
 }
 
-// We assume a non-null current node.
-static void moveForward(int n) {
-    assert(currentNode != NULL);
+// Checks if a given node lies at the extremes of the list.
+// We treat the dummy node as being an edge node for consistency.
+static int isEdgeNode(ListNode node) {
+    return  node == dummyNode       || \
+            node->prev == dummyNode || \
+            node->next == dummyNode ;
+}
 
+// Move numSteps forward along the list.
+static void moveForward(int numSteps) {
     int i;
-    for (i = 0; i < n && currentNode->next != NULL; i++) {
+    for (i = 0; i < numSteps && currentNode->next != dummyNode; i++) {
         currentNode = currentNode->next;
     }
 }
 
-// We assume a non-null current node. Once again, we have symmetry to
-// moveForward, but we cannot exploit it.
-static void moveBack(int n) {
-    assert(currentNode != NULL);
-
+// Move numSteps back along the list.
+// We have symmetry to moveForward, but we cannot exploit it.
+static void moveBack(int numSteps) {
     int i;
-    for (i = 0; i < n && currentNode->prev != NULL; i++) {
+    for (i = 0; i < numSteps && currentNode->prev != dummyNode; i++) {
         currentNode = currentNode->prev;
     }
+}
+
+// Inserts a node between the other two.
+static void insertNode(ListNode prev, ListNode newNode, ListNode next) {
+    prev->next = newNode;
+    next->prev = newNode;
+
+    newNode->prev = prev;
+    newNode->next = next;
+}
+
+// Inserts a node with a given value relative to the current node.
+// "Relative" means either immediately before or immediately after it.
+static void insertNodeRelativeToCurrent(Item newItem, int where) {
+    assert(where == BEFORE || where == AFTER);
+
+    ListNode node = newNode(newItem);
+
+    if (LISTempty()) {
+        // An empty list is a special case.
+        insertNode(dummyNode, node, dummyNode);
+    } else {
+        // Non-empty list...
+        if (where == BEFORE) {
+            insertNode(currentNode->prev, node, currentNode);
+        } else {
+            insertNode(currentNode, node, currentNode->next);
+        }
+    }
+
+    // As per the spec, the inserted node becomes current.
+    currentNode = node;
 }

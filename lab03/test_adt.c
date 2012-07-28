@@ -104,15 +104,19 @@ static void testLists(void) {
         printf("  delete that\n");
         LISTdelete();
         assert(LISTcurrent() == zeroth);
-        printf("  delete the rest, checking emptiness\n");
+        printf("  delete first elem\n");
         assert(!LISTempty() && LISTcurrent() == zeroth);
         LISTdelete();
-        assert(!LISTempty() && LISTcurrent() == second);
+        printf("  move to the end and keep deleting\n");
+        assert(LISTmove(2));
+        assert(!LISTempty() && LISTcurrent() == fourth);
         LISTdelete();
         assert(!LISTempty() && LISTcurrent() == third);
         LISTdelete();
-        assert(!LISTempty() && LISTcurrent() == fourth);
+        assert(!LISTempty() && LISTcurrent() == second);
         LISTdelete();
         assert(LISTempty());
     printf("Pass: deletion seems to work\n");
+
+    printf("\nAll tests passed.\n\n");
 }
