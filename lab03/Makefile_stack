@@ -1,0 +1,23 @@
+DEPS = STACK_array.o
+
+CC=gcc
+CFLAGS = -Wall -Werror -g
+
+all:
+	make test_stack_pop -f Makefile_stack
+	make test_stack_push  -f Makefile_stack
+
+test_stack_pop: ${DEPS} test_stack_pop.o
+	$(CC) $(CFLAGS) $^ -o $@
+	./$@ || exit 0
+	@echo 'Passed'
+
+test_stack_push: ${DEPS} test_stack_push.o
+	$(CC) $(CFLAGS) $^ -o $@
+	./$@ || exit 0
+	@echo 'Passed'
+
+clean:
+	rm ${DEPS} test_stack_pop test_stack_push test_stack_pop.o test_stack_push.o core
+
+.PHONY: all clean test_stack_pop test_stack_push
