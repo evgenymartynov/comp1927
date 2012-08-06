@@ -3,7 +3,7 @@
 # What my program will be called. Must come from similarly-named .c file.
 BIN  = lists
 # What my secondary files are. Note that they end in ".o": do NOT use ".c"!!!
-DEPS = 
+DEPS = testLists.o listPredicates.o
 
 CC=gcc
 CFLAGS = -Wall -Werror -g

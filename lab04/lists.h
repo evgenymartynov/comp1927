@@ -16,3 +16,5 @@ void square (link ls);
 void squareAll (link ls);
 
 int count (link ls, int (*pred)(Item));
+
+void freeList(link list);
