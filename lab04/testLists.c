@@ -36,6 +36,9 @@ static link createList5(void);
 static void testSquares(void);
 static void testCount(void);
 
+// Provided by *my* lists.c, missing from lists.h
+void freeList(link list);
+
 ////////////////////////////////////////////////////////////////////////
 //
 // Implementation code starts here
