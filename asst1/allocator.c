@@ -334,6 +334,7 @@ static Header freelist_bestfit(size_t size) {
 // Merges a chunk with its neighbours in the free list.
 static void freelist_merge_chunk(Header chunk) {
     // TODO
+    // Claim: if ((offset & size) == 0) then merge right else merge left
 }
 
 
