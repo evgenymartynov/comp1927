@@ -333,8 +333,36 @@ static Header freelist_bestfit(size_t size) {
 
 // Merges a chunk with its neighbours in the free list.
 static void freelist_merge_chunk(Header chunk) {
-    // TODO
+    size_t offset = chunk - freelist_head;
+
     // Claim: if ((offset & size) == 0) then merge right else merge left
+    if ((offset & chunk->size)) {
+        // merge left
+        Header other_chunk = chunk->prev;
+        size_t other_offset = (void*)other_chunk - (void*)freelist_head;
+        size_t expected_offset = offset - chunk->size;
+        if (other_offset == expected_offset) {
+            // Resize the other chunk.
+            other_chunk->size += chunk->size;
+
+            // Update free list nodes.
+            freelist_extract_chunk(chunk);
+            freelist_merge_chunk(other_chunk);
+        }
+    } else {
+        // merge right
+        Header other_chunk = chunk->next;
+        size_t other_offset = (void*)other_chunk - (void*)freelist_head;
+        size_t expected_offset = offset + chunk->size;
+        if (other_offset == expected_offset) {
+            // Resize this chunk.
+            chunk->size += other_chunk->size;
+
+            // Update free list nodes.
+            freelist_extract_chunk(other_chunk);
+            freelist_merge_chunk(chunk);
+        }
+    }
 }
 
 
