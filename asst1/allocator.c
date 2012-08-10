@@ -41,6 +41,7 @@ static Header chunk_create(void* where, size_t size);
 static void* get_user_memory(Header chunk);
 
 static void   freelist_init(size_t size);
+static void   freelist_destroy(void);
 static Header freelist_bestfit(size_t size);
 static void   freelist_split_chunk(Header chunk, size_t size);
 static int    freelist_has_one_chunk(void);
@@ -80,7 +81,7 @@ void allocator_end(void) {
     free(memory);
 
     memory = NULL;
-    freelist_head = NULL;
+    freelist_destroy();
 }
 
 
@@ -198,6 +199,12 @@ static void freelist_init(size_t size) {
     freelist_head->prev = freelist_head->next = freelist_head;
 }
 
+
+// Destroy the free list.
+static void freelist_destroy(void) {
+    // No need to free memory, as it is part of the allocator region.
+    freelist_head = NULL;
+}
 
 // Check if the free list has only one chunk in it.
 // This goes with the invariant as per the spec.
