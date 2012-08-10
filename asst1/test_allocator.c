@@ -13,6 +13,7 @@ typedef u_int32_t size_t;
 // Test prototypes
 static void test_allocator_setup(void);
 static void test_allocator_malloc(void);
+static void test_allocator_no_reclamation(void);
 
 // Utility prototypes
 static void* malloc_check(size_t size);
@@ -32,6 +33,7 @@ int main() {
 
     test_allocator_setup();
     test_allocator_malloc();
+    test_allocator_no_reclamation();
 
     return EXIT_SUCCESS;
 }
@@ -129,6 +131,64 @@ static void test_allocator_malloc(void) {
     printf("Passed\n");
 }
 
+
+// Tests freeing, assuming merging is not implemented.
+// Expects the best-fit strategy to be implemented
+// and that the memory is allocated as per the spec method.
+static void test_allocator_no_reclamation(void) {
+    printf("Testing allocator without merging...\n");
+        printf("  allocating 4096-byte slab\n");
+        allocator_init(4096);
+
+        void *ptr;
+        void *beginning;
+
+        printf("    malloc(128)\n");
+        beginning = ptr = malloc_check(128 - HEADER_SIZE);
+        printf("    freeing it\n");
+        allocator_free(ptr);
+
+        printf("    malloc(2048)\n");
+        ptr = malloc_check(2048 - HEADER_SIZE);
+        assert(ptr == beginning + 2048);
+        printf("    freeing it\n");
+        allocator_free(ptr);
+
+        printf("    malloc(512)\n");
+        ptr = malloc_check(512 - HEADER_SIZE);
+        assert(ptr == beginning + 512);
+        printf("    freeing it\n");
+        allocator_free(ptr);
+
+        printf("    malloc(2048)\n");
+        ptr = malloc_check(2048 - HEADER_SIZE);
+        assert(ptr == beginning + 2048);
+        printf("    freeing it\n");
+        allocator_free(ptr);
+
+        printf("    malloc(128)\n");
+        ptr = malloc_check(128 - HEADER_SIZE);
+        assert(ptr == beginning);
+        printf("    freeing it\n");
+        allocator_free(ptr);
+
+        printf("    malloc(64, 128, 32)\n");
+        void *first  = malloc_check(64 - HEADER_SIZE);
+        void *second = malloc_check(128 - HEADER_SIZE);
+        void *third  = malloc_check(32 - HEADER_SIZE);
+        printf("    ensure the right memregions are returned\n");
+        assert(first == beginning);
+        assert(second == beginning + 128);
+        assert(third == beginning + 64);
+        printf("    freeing 128, 32, 64\n");
+        allocator_free(second);
+        allocator_free(third);
+        allocator_free(first);
+
+        printf("  destroying allocator\n");
+        allocator_end();
+    printf("Passed\n");
+}
 
 // Tries to allocate memory, does write tests, but does not free it.
 // Expects that the allocation will always succeed.

@@ -10,6 +10,8 @@
 
 
 // Local defines
+#define TRUE                1
+#define FALSE               0
 #define MIN_ALLOCATOR_SIZE  sizeof(header)
 #define HEADER_FREE_MAGIC   0xBADA110C
 #define HEADER_USED_MAGIC   0xCAFFE14E
@@ -35,16 +37,19 @@ static Header freelist_head = NULL;
 //
 
 static size_t round_up_power_of_two(size_t size);
-static int chunk_is_free(Header chunk);
-static int __attribute__((unused)) chunk_is_used(Header chunk);
-static Header chunk_create(void* where, size_t size);
 static void* get_user_memory(Header chunk);
+
+static Header chunk_create(void* where, size_t size);
+static int    chunk_is_free(Header chunk);
+static int    chunk_is_used(Header chunk);
 
 static void   freelist_init(size_t size);
 static void   freelist_destroy(void);
 static Header freelist_bestfit(size_t size);
 static void   freelist_split_chunk(Header chunk, size_t size);
+static void   freelist_merge_chunk(Header chunk);
 static int    freelist_has_one_chunk(void);
+static void   freelist_insert_chunk(Header chunk);
 static void   freelist_extract_chunk(Header chunk);
 static void   freelist_print(void);
 
@@ -134,6 +139,25 @@ void* allocator_malloc(size_t size) {
 }
 
 
+// Eat me a sandwich.
+void allocator_free(void* region) {
+    // Get the header for region we are freeing.
+    Header chunk = region - sizeof(header);
+
+    // Ensure the header is not corrupt.
+    assert(chunk_is_used(chunk));
+
+    // Mark it as free.
+    chunk->magic = HEADER_FREE_MAGIC;
+
+    // And re-insert into the free list.
+    freelist_insert_chunk(chunk);
+
+    // And merge freed chunk together with the others.
+    freelist_merge_chunk(chunk);
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 //
 // Internal funcs start here
@@ -214,6 +238,54 @@ static int freelist_has_one_chunk(void) {
 }
 
 
+// Inserts a given chunk in-order into the free list.
+static void freelist_insert_chunk(Header chunk) {
+    Header curr = freelist_head;
+    int did_check = FALSE;
+
+    // Work out where we want to insert the given chunk.
+    // That accounts for the chunk address comparison.
+    // But that alone is insufficient: if we free a chunk /after/ the
+    // free list, then we get an infloop. Hence the second condition
+    // and the did_check flag.
+    while (chunk > curr && (!did_check || curr != freelist_head)) {
+        did_check = TRUE;
+        curr = curr->next;
+    }
+
+    // printf("before inserting %p\n  ", chunk);
+    // freelist_print();
+
+    // Now, inserting before curr will maintain the order in the list.
+    // Let's check that this is true.
+    if (chunk < freelist_head) {
+        // Chunk is before the freelist
+        assert(curr == freelist_head);
+    } else if (chunk > freelist_head->prev) {
+        // Chunk is after the freelist
+        assert(curr == freelist_head);
+    } else {
+        // Chunk is in the middle of the free list
+        assert(curr->prev < chunk && chunk < curr);
+    }
+
+    // Now, insert the chunk.
+    // We need to insert the chunk before curr.
+    chunk->prev = curr->prev;
+    chunk->next = curr;
+
+    chunk->prev->next = chunk;
+    chunk->next->prev = chunk;
+
+    // Shift the freelist_head to point to earliest chunk, if needed.
+    if (freelist_head > chunk) {
+        freelist_head = chunk;
+    }
+
+    // printf("after inserting %p\n  ", chunk);
+    // freelist_print();
+}
+
 // Removes a given chunk from the free list.
 // Assumes that this is not the only chunk in the list.
 static void freelist_extract_chunk(Header chunk) {
@@ -259,6 +331,12 @@ static Header freelist_bestfit(size_t size) {
 }
 
 
+// Merges a chunk with its neighbours in the free list.
+static void freelist_merge_chunk(Header chunk) {
+    // TODO
+}
+
+
 // Splits a given chunk so that the requested size can fit.
 // The spec says to do it using the halving method... wtf?
 static void freelist_split_chunk(Header chunk, size_t size) {
@@ -289,7 +367,7 @@ static void __attribute__((unused)) freelist_print(void) {
     Header curr = freelist_head;
 
     do {
-        printf("<%u> ", curr->size);
+        printf("<%u|%p> ", curr->size, curr);
         curr = curr->next;
     } while (curr != freelist_head);
 
