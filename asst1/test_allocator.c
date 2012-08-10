@@ -122,7 +122,8 @@ static void test_allocator_malloc(void) {
             printf("16... ");
             malloc_check(16 - HEADER_SIZE);
             printf("16... ");
-            malloc_check_fail(16-HEADER_SIZE);
+            malloc_check_fail(16 - HEADER_SIZE);
+            allocator_end();
         printf("ok\n");
 
     printf("Passed\n");
