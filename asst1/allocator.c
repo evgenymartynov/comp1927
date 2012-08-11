@@ -1,7 +1,39 @@
 // Author: evgenym
 // Tutorial: Tue 11 Bell
 // Date: 8 Aug 2012
-// Summary: Assignment 1, memory allocator
+
+// Summary:
+// Complete solution for Assignment 1: memory allocator.
+
+// I have followed the asst spec almost to the letter, only departing
+// from it (as far as I can tell) only in my choice of types.
+
+// In particular, I have decided to use void* for the memory buffer
+// location, as it makes more sense than char*. However, char* has well-
+// defined pointer arithmetic, whereas void* arithmetic is unspecified.
+// So you will see some magic with repeated char* and void* casts.
+// Using void* makes sense for me, in this particular case.
+
+// Further, I decided to use size_t instead of u_int32_t, for two
+// reasons.
+// First, it is shorter, and has a better name.
+// Second, it makes no difference anyway, as I've done a typedef.
+
+////////////////////////////////////////////////////////////////////////
+//
+// Possible to-do list:
+// 1) Add more reliable error-checking to headers.
+//    For example, set magic = CONST ^ size, or something.
+//    That will catch most (but not all) header corruptions.
+//
+// 2) Segregate different components into different files.
+//    There are 3 things here: allocator, free list, and chunks.
+//    While they are all interrelated, this file is too cluttered.
+//
+// 3) Add more tests.
+//    Currently, my tests don't test that merging works properly.
+//
+////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
 #include <stdlib.h>
