@@ -53,7 +53,11 @@ static void   freelist_merge_chunk(Header chunk);
 static int    freelist_has_one_chunk(void);
 static void   freelist_insert_chunk(Header chunk);
 static void   freelist_extract_chunk(Header chunk);
-static void   freelist_print(void);
+
+// Debugging functions, please ignore.
+static void freelist_print(void);
+static void freelist_print_list(void);
+static void freelist_print_bar(void);
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -404,8 +408,20 @@ static void freelist_split_chunk(Header chunk, size_t size) {
 }
 
 
-// Displays the free list; for debugging.
+////////////////////////////////////////////////////////////////////////
+//
+// Debug functions, please ignore when marking.
+//
+////////////////////////////////////////////////////////////////////////
+
+// Prints out the free list representation.
 static void __attribute__((unused)) freelist_print(void) {
+    freelist_print_bar();
+}
+
+
+// Displays the free list's nodes.
+static void __attribute__((unused)) freelist_print_list(void) {
     Header curr = freelist_head;
 
     do {
@@ -414,4 +430,32 @@ static void __attribute__((unused)) freelist_print(void) {
     } while (curr != freelist_head);
 
     printf("\n");
+}
+
+
+// Displays ASCII-art-ish representation of the buffer utilisation.
+static void __attribute__((unused)) freelist_print_bar(void) {
+    Header curr = freelist_head;
+
+    size_t bytes_per_symbol = sizeof(header) * 2;
+    size_t display_width = buffer_size / bytes_per_symbol;
+
+    char *display = (char*)calloc(display_width + 1, 1);
+    size_t i;
+    for (i = 0; i < display_width; i++) {
+        display[i] = 'X';
+    }
+
+    do {
+        size_t this_width = curr->size / bytes_per_symbol;
+        size_t this_begin = chunk_get_offset(curr) / bytes_per_symbol;
+        for (i = 0; i < this_width; i++) {
+            display[this_begin + i] = '.';
+        }
+
+        curr = curr->next;
+    } while (curr != freelist_head);
+
+    printf("%s\n", display);
+    free(display);
 }
