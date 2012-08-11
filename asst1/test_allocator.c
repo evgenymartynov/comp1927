@@ -150,23 +150,20 @@ static void test_allocator_no_reclamation(void) {
 
         printf("    malloc(2048)\n");
         ptr = malloc_check(2048 - HEADER_SIZE);
-        assert(ptr == beginning + 2048);
         printf("    freeing it\n");
         allocator_free(ptr);
 
         printf("    malloc(512)\n");
         ptr = malloc_check(512 - HEADER_SIZE);
-        assert(ptr == beginning + 512);
         printf("    freeing it\n");
         allocator_free(ptr);
 
         printf("    malloc(2048)\n");
         ptr = malloc_check(2048 - HEADER_SIZE);
-        assert(ptr == beginning + 2048);
         printf("    freeing it\n");
         allocator_free(ptr);
 
-        printf("    malloc(128)\n");
+        printf("    malloc(128), ensure matches first malloc\n");
         ptr = malloc_check(128 - HEADER_SIZE);
         assert(ptr == beginning);
         printf("    freeing it\n");
