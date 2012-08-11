@@ -29,7 +29,8 @@ typedef struct _header {
 } header;
 
 // Globals
-static void *memory = NULL;
+static void   *buffer_base = NULL;
+static size_t buffer_size;
 static Header freelist_head = NULL;
 
 //
@@ -42,6 +43,7 @@ static void*  get_user_memory(Header chunk);
 static Header chunk_create(void* where, size_t size);
 static int    chunk_is_free(Header chunk);
 static int    chunk_is_used(Header chunk);
+static size_t chunk_get_offset(Header chunk);
 
 static void   freelist_init(size_t size);
 static void   freelist_destroy(void);
@@ -64,17 +66,18 @@ static void   freelist_print(void);
 void allocator_init(size_t size) {
     // If was already initialised, then do nothing even if a different
     // size is used.
-    if (memory != NULL) {
+    if (buffer_base != NULL) {
         return;
     }
 
     // Round up allocation size to a power of two, if needed.
     assert(size > MIN_ALLOCATOR_SIZE);
     size = round_up_power_of_two(size);
+    buffer_size = size;
 
     // Allocate that chunk normally
-    memory = malloc(size);
-    assert(memory != NULL);
+    buffer_base = malloc(size);
+    assert(buffer_base != NULL);
 
     // Set up the free list
     freelist_init(size);
@@ -83,9 +86,10 @@ void allocator_init(size_t size) {
 
 // Destroy the allocator.
 void allocator_end(void) {
-    free(memory);
+    free(buffer_base);
 
-    memory = NULL;
+    buffer_base = NULL;
+    buffer_size = 0;
     freelist_destroy();
 }
 
@@ -93,13 +97,10 @@ void allocator_end(void) {
 // Make me a sandwich
 void* allocator_malloc(size_t size) {
     // Make sure the allocator has been initialised.
-    assert(memory != NULL);
+    assert(buffer_base != NULL);
 
     // Add bookkeeping costs.
     size += sizeof(header);
-    // printf("  looking for %u space\n", size);
-
-    // printf(">> before: "); freelist_print();
 
     // Find a free chunk
     Header chunk = freelist_bestfit(size);
@@ -132,8 +133,6 @@ void* allocator_malloc(size_t size) {
 
     // Remove it from the free list.
     freelist_extract_chunk(chunk);
-
-    // printf("<< after: "); freelist_print();
 
     return get_user_memory(chunk);
 }
@@ -210,6 +209,12 @@ static Header chunk_create(void* where, size_t size) {
 }
 
 
+// Returns offset of a chunk relative to the buffer.
+static size_t chunk_get_offset(Header chunk) {
+    return (void*)chunk - buffer_base;
+}
+
+
 // Returns usable memory pertaining to a given chunk.
 static void* get_user_memory(Header chunk) {
     return (void*)chunk + sizeof(*chunk);
@@ -218,8 +223,8 @@ static void* get_user_memory(Header chunk) {
 
 // Initialises the free list for entire allocated region.
 static void freelist_init(size_t size) {
-    freelist_head = (Header)memory;
-    chunk_create(memory, size);
+    freelist_head = (Header)buffer_base;
+    chunk_create(buffer_base, size);
     freelist_head->prev = freelist_head->next = freelist_head;
 }
 
@@ -254,9 +259,6 @@ static void freelist_insert_chunk(Header chunk) {
         curr = curr->next;
     }
 
-    // printf("before inserting %p\n  ", chunk);
-    // freelist_print();
-
     // Now, inserting before curr will maintain the order in the list.
     // Let's check that this is true.
     if (chunk < freelist_head) {
@@ -282,10 +284,8 @@ static void freelist_insert_chunk(Header chunk) {
     if (freelist_head > chunk) {
         freelist_head = chunk;
     }
-
-    // printf("after inserting %p\n  ", chunk);
-    // freelist_print();
 }
+
 
 // Removes a given chunk from the free list.
 // Assumes that this is not the only chunk in the list.
@@ -336,12 +336,24 @@ static Header freelist_bestfit(size_t size) {
 static void freelist_merge_chunk(Header chunk) {
     size_t offset = chunk - freelist_head;
 
-    // Claim: if ((offset & size) == 0) then merge right else merge left
+    // Because all sizes and offsets are a power of two, it suffices
+    // to check if (offset & size) is zero or not.
+    // If it is non-zero, then we are the second chunk, and have to
+    // merge left.
+    // Otherwise, we are the first chunk, and we merge right.
+    // Here, 'first'/'second' correspond to the splitting procedure
+    // as per the spec.
+
     if ((offset & chunk->size)) {
-        // merge left
+        // Merge given chunk to the left
         Header other_chunk = chunk->prev;
-        size_t other_offset = (void*)other_chunk - (void*)freelist_head;
+        size_t other_offset = chunk_get_offset(other_chunk);
         size_t expected_offset = offset - chunk->size;
+
+        // We need to check if chunk immediately before us is adjacent
+        // to us. If it is not, then we cannot merge (i.e. a used
+        // region is in-between).
+
         if (other_offset == expected_offset) {
             // Resize the other chunk.
             other_chunk->size += chunk->size;
@@ -351,15 +363,15 @@ static void freelist_merge_chunk(Header chunk) {
             freelist_merge_chunk(other_chunk);
         }
     } else {
-        // merge right
+        // Merge given chunk to the right.
+        // Procedure is similar to the above.
         Header other_chunk = chunk->next;
-        size_t other_offset = (void*)other_chunk - (void*)freelist_head;
+        size_t other_offset = chunk_get_offset(other_chunk);
         size_t expected_offset = offset + chunk->size;
+
         if (other_offset == expected_offset) {
-            // Resize this chunk.
             chunk->size += other_chunk->size;
 
-            // Update free list nodes.
             freelist_extract_chunk(other_chunk);
             freelist_merge_chunk(chunk);
         }
