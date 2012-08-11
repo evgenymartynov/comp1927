@@ -22,7 +22,7 @@ ${BIN}: ${BIN}.o ${DEPS}
 
 # This will remove all compiled files
 clean:
-	rm ${BIN} ${BIN}.o ${DEPS}
+	rm -f ${BIN} ${BIN}.o ${DEPS}
 
 # Some book-keeping stuff. Ignore it.
 .PHONY: all clean
