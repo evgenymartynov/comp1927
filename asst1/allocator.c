@@ -145,7 +145,7 @@ void* allocator_malloc(size_t size) {
 // Eat me a sandwich.
 void allocator_free(void* region) {
     // Get the header for region we are freeing.
-    Header chunk = region - sizeof(header);
+    Header chunk = (Header)((char*)region - sizeof(header));
 
     // Ensure the header is not corrupt.
     assert(chunk_is_used(chunk));
@@ -215,13 +215,13 @@ static Header chunk_create(void* where, size_t size) {
 
 // Returns offset of a chunk relative to the buffer.
 static size_t chunk_get_offset(Header chunk) {
-    return (void*)chunk - buffer_base;
+    return (char*)chunk - (char*)buffer_base;
 }
 
 
 // Returns usable memory pertaining to a given chunk.
 static void* get_user_memory(Header chunk) {
-    return (void*)chunk + sizeof(*chunk);
+    return (void*)((char*)chunk + sizeof(*chunk));
 }
 
 
@@ -390,7 +390,7 @@ static void freelist_split_chunk(Header chunk, size_t size) {
     while (chunk->size / 2 >= size) {
         // Work out where to split.
         size_t split_size = chunk->size / 2;
-        void* middle = (void*)chunk + split_size;
+        void* middle = (void*)((char*)chunk + split_size);
 
         // Create a new chunk on the right.
         Header right = chunk_create(middle, split_size);
@@ -425,7 +425,7 @@ static void __attribute__((unused)) freelist_print_list(void) {
     Header curr = freelist_head;
 
     do {
-        printf("<%u|%p> ", curr->size, curr);
+        printf("<%u|%p> ", curr->size, (void*)curr);
         curr = curr->next;
     } while (curr != freelist_head);
 

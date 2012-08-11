@@ -175,8 +175,8 @@ static void test_allocator_no_reclamation(void) {
         void *third  = malloc_check(32 - HEADER_SIZE);
         printf("    ensure the right memregions are returned\n");
         assert(first == beginning);
-        assert(second == beginning + 128);
-        assert(third == beginning + 64);
+        assert(second == (char*)beginning + 128);
+        assert(third == (char*)beginning + 64);
         printf("    freeing 128, 32, 64\n");
         allocator_free(second);
         allocator_free(third);
