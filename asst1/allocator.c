@@ -33,11 +33,11 @@ static void *memory = NULL;
 static Header freelist_head = NULL;
 
 //
-// Local protyotypes
+// Local prototypes
 //
 
 static size_t round_up_power_of_two(size_t size);
-static void* get_user_memory(Header chunk);
+static void*  get_user_memory(Header chunk);
 
 static Header chunk_create(void* where, size_t size);
 static int    chunk_is_free(Header chunk);
@@ -229,6 +229,7 @@ static void freelist_destroy(void) {
     // No need to free memory, as it is part of the allocator region.
     freelist_head = NULL;
 }
+
 
 // Check if the free list has only one chunk in it.
 // This goes with the invariant as per the spec.
