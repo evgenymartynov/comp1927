@@ -3,3 +3,7 @@ site/*
 *.sublime-*
 core
 *.o
+*.gcda
+*.gcno
+*.info
+coverage
