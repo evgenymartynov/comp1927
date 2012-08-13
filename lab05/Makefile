@@ -1,7 +1,7 @@
 # You can change BIN and DEPS below.
 
 # What my program will be called. Must come from similarly-named .c file.
-BIN  = tree-traversal
+BIN  = Tree
 # What my secondary files are. Note that they end in ".o": do NOT use ".c"!!!
 DEPS =
 
