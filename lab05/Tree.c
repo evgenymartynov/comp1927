@@ -98,6 +98,21 @@ treeLink deleteTree(treeLink t) {
     return NULL;
 }
 
+static void printTreeA(treeLink tree, int height) {
+    if (tree != NULL) {
+        printTreeA(tree->left, height +1);
+        int i;
+        for (i = 0; i < height; i++){
+            printf("   ");
+        }
+        printf("%d\n", tree->item);
+        printTreeA(tree->right, height + 1);
+    }
+}
+
+void printTree(treeLink tree) {
+    printTreeA(tree, 0);
+}
 
 ///////////////////////////////////////////////////////////////////////
 //
