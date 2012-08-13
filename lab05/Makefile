@@ -1,9 +1,9 @@
 # You can change BIN and DEPS below.
 
 # What my program will be called. Must come from similarly-named .c file.
-BIN  = Tree
+BIN  = test-tree
 # What my secondary files are. Note that they end in ".o": do NOT use ".c"!!!
-DEPS =
+DEPS = Tree.o
 
 CC=gcc
 CFLAGS = -Wall -Werror -g

@@ -5,24 +5,24 @@
 // Summary:
 // Simple tree-traversal exercise from Lab05.
 // Lab exercise asked for full branch coverage.
-// The tests provide 100% code coverage (tested with gcov/lcov).
+// The tests provide 100% code coverage (as determined by gcov/lcov)
+// of my own functions.
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "Item.h"
+#include "Tree.h"
 
 //
 // Local struct typedefs
 //
 
-typedef struct treeNode *treeLink;
-typedef struct treeNode {
+struct treeNode {
     Item item;
     treeLink left, right;
-} node;
+};
 
-// I really dislike the type-naming conventions used in labs.
+// I don't like the type-naming conventions used in labs.
 typedef treeLink Node;
 
 
@@ -30,27 +30,12 @@ typedef treeLink Node;
 // Local prototypes
 //
 
-int         count(Node tree);
-
 static Node newNode(Item value, Node leftChild, Node rightChild);
-static void destroyTree(Node root);
-static void testCount(void);
-
-
-int main(int argc, char *argv[]) {
-    // Disable line-buffering
-    setbuf(stdout, NULL);
-    setbuf(stderr, NULL);
-
-    testCount();
-
-    return EXIT_SUCCESS;
-}
 
 
 ///////////////////////////////////////////////////////////////////////
 //
-// Interface implementation code starts here
+// Interface implementation code starts here [mark this]
 //
 ///////////////////////////////////////////////////////////////////////
 
@@ -73,7 +58,50 @@ int count(Node tree) {
 
 ///////////////////////////////////////////////////////////////////////
 //
-// Internal implementation code starts here
+// Given ADT implementation code starts here [do not mark this]
+//
+///////////////////////////////////////////////////////////////////////
+
+
+//Creates a new tree with root a
+treeLink newTree(Item a) {
+    treeLink new = malloc (sizeof(struct treeNode));
+    new ->item = a;
+    new->left = NULL;
+    new->right = NULL;
+    return new;
+}
+
+
+//adds a node to the tree in no particularly defined way
+treeLink addToTree(treeLink t, Item a) {
+    if (t == NULL) {
+        t = newTree(a);
+    } else {
+        if (t->item < a) {
+            t->right = addToTree(t->right, a);
+        } else {
+            t->left = addToTree(t->left, a);
+        }
+    }
+    return t;
+}
+
+
+//frees memory and returns NULL if successful
+treeLink deleteTree(treeLink t) {
+    if (t != NULL) {
+        t->right = deleteTree(t->right);
+        t->left = deleteTree(t->left);
+        free(t);
+    }
+    return NULL;
+}
+
+
+///////////////////////////////////////////////////////////////////////
+//
+// Internal implementation code starts here [mark this]
 //
 ///////////////////////////////////////////////////////////////////////
 
@@ -90,16 +118,6 @@ static Node newNode(Item value, Node leftChild, Node rightChild) {
     return node;
 }
 
-// Frees up memory taken up by a tree.
-// Takes in NULL trees, too.
-static void destroyTree(Node root) {
-    if (root != NULL) {
-        destroyTree(root->left);
-        destroyTree(root->right);
-        free(root);
-    }
-}
-
 // Tests the count() func.
 void testCount(void) {
     printf("Testing count()...\n");
@@ -108,23 +126,23 @@ void testCount(void) {
 
         printf("  testing an empty (NULL) tree...\n");
             assert(count(root) == 0);
-        destroyTree(root);
+        deleteTree(root);
 
         printf("  testing degenerate tree (1 node)\n");
             root = newNode(5, NULL, NULL);
             assert(count(root) == 1);
-        destroyTree(root);
+        deleteTree(root);
 
         printf("  testing one-left-child tree\n");
             temp = newNode(2, NULL, NULL);
             root = newNode(5, temp, NULL);
             assert(count(root) == 1);
-        destroyTree(root);
+        deleteTree(root);
         printf("  testing one-right-child tree\n");
             temp = newNode(2, NULL, NULL);
             root = newNode(5, NULL, temp);
             assert(count(root) == 1);
-        destroyTree(root);
+        deleteTree(root);
 
         printf("  testing degenerate tree (5 linear nodes)\n");
             temp = newNode(1, NULL, NULL);
@@ -133,7 +151,7 @@ void testCount(void) {
             temp = newNode(4, temp, NULL);
             root = newNode(5, temp, NULL);
             assert(count(root) == 1);
-        destroyTree(root);
+        deleteTree(root);
 
         printf("  testing full binary tree (7 nodes, depth 3)\n");
             root =
@@ -148,7 +166,7 @@ void testCount(void) {
                     )
                 );
             assert(count(root) == 4);
-        destroyTree(root);
+        deleteTree(root);
 
     printf("Passed\n");
 }
