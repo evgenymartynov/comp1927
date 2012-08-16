@@ -60,7 +60,7 @@ static void test_allocator_setup(void) {
 }
 
 
-// Tests that _malloc() compiles with the specificiation.
+// Tests that _malloc() complies with the specificiation.
 // In particular, we CAN EXPECT to know the offset of an allocation.
 // And we also can work out how much memory to ask for.
 // For this, we need to know the size of the header struct.
