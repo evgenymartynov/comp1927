@@ -9,6 +9,7 @@
 
 #include "List.h"
 
+
 // Defines go here
 #define MSORT_CUTOFF_LENGTH 3
 
@@ -25,6 +26,7 @@ struct _list {
     Node head;
 };
 
+
 // Local prototypes
 static Node newNode(Node next, int value);
 static void freeNode(Node node);
@@ -33,6 +35,10 @@ static void __attribute__((unused)) printList(Node head);
 static Node mergesortWorker(Node head);
 static Node insertionsortWorker(Node head);
 static Node quicksortWorker(Node head);
+
+static Node splitInHalf(Node head);
+static Node mergeLists(Node left, Node right);
+
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -225,41 +231,81 @@ static Node mergesortWorker(Node head) {
         return head;
     }
 
-    return insertionsortWorker(head);
+    // Check if the length of this list is sufficiently small.
+    // We only need to check the first MSORT_CUTOFF_LENGTH+1 nodes.
+    int length = 0;
+    Node temp = head;
+    while (length <= MSORT_CUTOFF_LENGTH && temp != NULL) {
+        length++;
+        temp = temp->next;
+    }
 
-    // // Check if the length of this list is sufficiently small.
-    // // We only need to check the first MSORT_CUTOFF_LENGTH+1 nodes.
-    // int length = 0;
-    // Node temp = head;
-    // while (length <= MSORT_CUTOFF_LENGTH && temp != NULL) {
-    //     length++;
-    //     temp = temp->next;
-    // }
+    // If the list is small, we insertion-sort it.
+    if (length <= MSORT_CUTOFF_LENGTH) {
+        return insertionsortWorker(head);
+    }
 
-    // // If the list is small, we insertion-sort it.
-    // if (length < MSORT_CUTOFF_LENGTH) {
-    //     return insertionsortWorker(head);
-    // }
+    // Otherwise, we run the standard mergesort procedure.
+    Node mid    = splitInHalf(head);
+    Node left   = mergesortWorker(head);
+    Node right  = mergesortWorker(mid);
+    Node sorted = mergeLists(left, right);
 
-    // // Otherwise, we run the standard mergesort procedure.
-    // Node mid    = splitInHalf(head);
-    // Node left   = mergesortWorker(head);
-    // Node right  = mergesortWorker(mid);
-    // Node sorted = mergeLists(left, right);
-
-    // return sorted;
+    return sorted;
 }
 
 
+// Performs quicksort with the first node taken as pivot.
 static Node quicksortWorker(Node head) {
     // If we are given an empty or one-node list, it is already sorted.
     if (head == NULL || head->next == NULL) {
         return head;
     }
 
-    // TODO
+    // Partition the list...
+    Node pivot = head;
+    Node curr = head->next;
+    Node left = NULL, right = NULL;
 
-    return insertionsortWorker(head);
+    while (curr != NULL) {
+        Node next = curr->next;
+
+        // Smaller values go to the left, larger-or-equal to the right.
+        if (curr->value < pivot->value) {
+            curr->next = left;
+            left = curr;
+        } else {
+            curr->next = right;
+            right = curr;
+        }
+
+        curr = next;
+    }
+
+    // Now recurse
+    left  = quicksortWorker(left);
+    right = quicksortWorker(right);
+
+    // Join pivot to the right half.
+    pivot->next = right;
+    right = pivot;
+
+    // Find the last node of the left list.
+    Node leftTail = left;
+    while (leftTail != NULL && leftTail->next != NULL) {
+        leftTail = leftTail->next;
+    }
+
+    // Recombine the (possibly empty) left list with the right list.
+    Node sorted;
+    if (left != NULL) {
+        leftTail->next = right;
+        sorted = left;
+    } else {
+        sorted = right;
+    }
+
+    return sorted;
 }
 
 
@@ -312,4 +358,92 @@ static Node insertionsortWorker(Node head) {
 
     // We return the start of the sorted list.
     return sortedHead;
+}
+
+
+// Splits the list in half, returns start of the right half.
+static Node splitInHalf(Node head) {
+    // If given an empty or degenerate list, there is no second half.
+    if (head == NULL || head->next == NULL) {
+        return NULL;
+    }
+
+    // We walk along the list with two pointers, advancing the left ptr
+    // by one step, and the right by two steps.
+    Node left = head, right = head;
+    Node prevLeft = NULL;
+
+    while (right != NULL) {
+        // Advance left by one
+        prevLeft = left;
+        left     = left->next;
+
+        // Advance right by two
+        if (right->next != NULL) {
+            right = right->next->next;
+        } else {
+            right = right->next;
+        }
+    }
+
+    assert(prevLeft != NULL);
+
+    // Now left points to the end of left half.
+    // We make right start from the next node, and return that.
+    right = prevLeft->next;
+    prevLeft->next = NULL;
+
+    return right;
+}
+
+
+// Merges two sorted lists into one and returns the head of sorted list.
+static Node mergeLists(Node left, Node right) {
+    // No-op on empty lists.
+    if (left == NULL && right == NULL) {
+        return NULL;
+    } else if (left == NULL) {
+        return right;
+    } else if (right == NULL) {
+        return left;
+    }
+
+    // Now we know that both lists are non-empty.
+
+    Node sorted = NULL;
+    Node tail = NULL;
+
+    // Work out the first node of the sorted list.
+    if (left->value < right->value) {
+        sorted = tail = left;
+        left = left->next;
+    } else {
+        sorted = tail = right;
+        right = right->next;
+    }
+
+    sorted->next = NULL;
+
+    // Now go through the rest and merge normally
+    while (left != NULL && right != NULL) {
+        if (left->value < right->value) {
+            tail->next = left;
+            left = left->next;
+        } else {
+            tail->next = right;
+            right = right->next;
+        }
+
+        tail = tail->next;
+        tail->next = NULL;
+    }
+
+    // Now join the remaining single non-empty list to the sorted list.
+    if (left != NULL) {
+        tail->next = left;
+    } else if (right != NULL) {
+        tail->next = right;
+    }
+
+    return sorted;
 }
