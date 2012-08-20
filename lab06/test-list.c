@@ -88,7 +88,7 @@ int main () {
 
    int array2[7];
 
-   copyToArray(l, array2, size(l2));
+   copyToArray(l, array2, size(l));
 
    assert(array2[0] == 40);
    assert(array2[1] == -200);
@@ -115,7 +115,7 @@ int main () {
    printf("Passed\n");
    printf("Testing the quicksort function sorts...\n");
    l2 = quicksort(l2);
-   copyToArray(l, array2, size(l2));
+   copyToArray(l2, array2, size(l2));
 
    assert(array2[0] == -200);
    assert(array2[1] == -10);
