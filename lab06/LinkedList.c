@@ -74,12 +74,8 @@ List freeList(List list) {
 List add(List list, int value) {
     assert(list != NULL);
 
-    printf("add(): pre: "); printList(list->head);
-
     Node node = newNode(list->head, value);
     list->head = node;
-
-    printf("add(): post: "); printList(list->head);
 
     return list;
 }
@@ -271,8 +267,6 @@ static Node quicksortWorker(Node head) {
 static Node insertionsortWorker(Node head) {
     assert(head != NULL);
 
-    printf("insertionsortWorker(): pre: "); printList(head);
-
     // If the list one-long, it's sorted.
     if (head->next == NULL) {
         return head;
@@ -287,9 +281,6 @@ static Node insertionsortWorker(Node head) {
 
     // While there are nodes to sort...
     while (rest != NULL) {
-        printf("insertionsortWorker(): sorted: "); printList(sortedHead);
-        printf("insertionsortWorker(): rest: "); printList(rest);
-
         // extract one node...
         Node curr = rest;
         rest = rest->next;
@@ -317,9 +308,6 @@ static Node insertionsortWorker(Node head) {
             curr->next = next;
             prev->next = curr;
         }
-
-        printf("insertionsortWorker(): post: sorted: "); printList(sortedHead);
-        printf("insertionsortWorker(): post: rest: "); printList(rest);
     }
 
     // We return the start of the sorted list.
