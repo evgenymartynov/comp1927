@@ -1,7 +1,44 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 #include "List.h"
+
+#define N      1000
+#define NTESTS 1000
+
+void genrand(int *a, int n) {
+   int i;
+   for (i = 0; i < n; i++) {
+      a[i] = rand();
+   }
+}
+
+List mklist(int *a, int n) {
+   int i;
+   List res = createEmptyList();
+   for (i = n-1; i >= 0; i--) {
+      res = add(res, a[i]);
+   }
+
+   return res;
+}
+
+int equal(List list, int *a, int n) {
+   int r[N], i;
+   copyToArray(list, r, n);
+   for (i = 0; i < n; i++) {
+      if (r[i] != a[i]) {
+         return 0;
+      }
+   }
+
+   return 1;
+}
+
+int intcmp(const void* a, const void* b) {
+   return *(int*)a - *(int*)b;
+}
 
 int main () {
    setbuf(stdout, NULL);
@@ -100,7 +137,7 @@ int main () {
 
    printf("Passed\n");
    printf("Testing the mergesort function sorts...\n");
-   l = mergesort(l);
+   l = mergesortList(l);
 
    copyToArray(l, array, size(l));
 
@@ -114,7 +151,7 @@ int main () {
 
    printf("Passed\n");
    printf("Testing the quicksort function sorts...\n");
-   l2 = quicksort(l2);
+   l2 = quicksortList(l2);
    copyToArray(l2, array2, size(l2));
 
    assert(array2[0] == -200);
@@ -128,5 +165,29 @@ int main () {
    printf("Passed\n");
    printf("SUCCESS!! Great job, maybe write some tests on your own??\n");
    printf("Cause that would make you even more AWESOME!!\n");
+
+   srand(time(NULL));
+   int test;
+   for (test = 0; test < NTESTS; test++) {
+      int arr[N];
+      genrand(arr, N);
+      List ql = mklist(arr, N);
+      List ml = mklist(arr, N);
+      ql = quicksortList(ql);
+      ml = mergesortList(ml);
+      qsort(arr, N, sizeof(int), intcmp);
+      assert(equal(ql, arr, N));
+      assert(equal(ml, arr, N));
+
+      freeList(ql);
+      freeList(ml);
+
+      printf(".");
+      if (test % 80 == 79) {
+         printf("\n");
+      }
+   }
+   printf("\n");
+
    return EXIT_SUCCESS;
 }

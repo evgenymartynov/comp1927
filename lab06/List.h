@@ -37,8 +37,8 @@ void copyToArray(List l, int a[], int n);
 
 // Returns a sorted copy of the list l
 // Sorts the list using mergesort
-List mergesort(List l);
+List mergesortList(List l);
 
 // Returns a sorted copy of the list l
 // Sorts the list using quicksort
-List quicksort(List l);
+List quicksortList(List l);

@@ -137,7 +137,7 @@ bool isSorted(List list) {
 
     // Walk through the list, keeping track of the value previously seen
     for (curr = list->head; sorted && curr != NULL; curr = curr->next) {
-        if (curr->value < prevValue) {
+        if (curr->value <= prevValue) {
             sorted = FALSE;
         }
 
@@ -164,7 +164,7 @@ void copyToArray(List list, int arr[], int n) {
 
 
 // Performs mergesort on the list.
-List mergesort(List list) {
+List mergesortList(List list) {
     assert(list != NULL);
 
     // We will drop the List abstraction for the sort, and instead
@@ -178,7 +178,7 @@ List mergesort(List list) {
 
 
 // Performs quicksort on the list.
-List quicksort(List list) {
+List quicksortList(List list) {
     assert(list != NULL);
 
     Node sortedHead = quicksortWorker(list->head);
