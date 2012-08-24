@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 #include "allocator.h"
 
@@ -170,6 +171,8 @@ void* allocator_malloc(size_t size) {
     // Remove it from the free list.
     freelist_extract_chunk(chunk);
 
+    freelist_print();
+
     return get_user_memory(chunk);
 }
 
@@ -190,6 +193,8 @@ void allocator_free(void* region) {
 
     // And merge freed chunk together with the others.
     freelist_merge_chunk(chunk);
+
+    freelist_print();
 }
 
 
@@ -449,45 +454,50 @@ static void freelist_split_chunk(Header chunk, size_t size) {
 // Prints out the free list representation.
 static void __attribute__((unused)) freelist_print(void) {
     freelist_print_bar();
+    freelist_print_list();
 }
 
+// Escape codes for colours
+#define COL_WHITE "\e[0;0m"
+#define COL_RED   "\e[1;31m"
+#define COL_GRE   "\e[1;32m"
+#define COL_BLU   "\e[1;34m"
 
-// Displays the free list's nodes.
+// Displays the free list's nodes as a linked list.
 static void __attribute__((unused)) freelist_print_list(void) {
     Header curr = freelist_head;
 
     do {
-        printf("<%u|%p> ", curr->size, (void*)curr);
+        printf("<"COL_BLU"%u"COL_WHITE"|%p> ", curr->size, (void*)curr);
         curr = curr->next;
     } while (curr != freelist_head);
 
     printf("\n");
 }
 
-
 // Displays ASCII-art-ish representation of the buffer utilisation.
 static void __attribute__((unused)) freelist_print_bar(void) {
     Header curr = freelist_head;
-
-    size_t bytes_per_symbol = sizeof(header) * 2;
+    size_t i;
+    size_t bytes_per_symbol = sizeof(*curr) * 2;
     size_t display_width = buffer_size / bytes_per_symbol;
 
     char *display = (char*)calloc(display_width + 1, 1);
-    size_t i;
-    for (i = 0; i < display_width; i++) {
-        display[i] = 'X';
-    }
+    memset(display, 'X', display_width);
 
     do {
-        size_t this_width = curr->size / bytes_per_symbol;
-        size_t this_begin = chunk_get_offset(curr) / bytes_per_symbol;
-        for (i = 0; i < this_width; i++) {
-            display[this_begin + i] = '.';
-        }
-
+        size_t chunk_width = curr->size / bytes_per_symbol;
+        size_t chunk_begin = chunk_get_offset(curr) / bytes_per_symbol;
+        memset(display + chunk_begin, '-', chunk_width);
         curr = curr->next;
     } while (curr != freelist_head);
 
-    printf("%s\n", display);
+    printf("[");
+        for (i = 0; display[i]; i++) {
+            printf(display[i] == '-' ? COL_GRE : COL_RED);
+            printf("%c" COL_WHITE, display[i]);
+        }
+    printf("]\n");
+
     free(display);
 }
