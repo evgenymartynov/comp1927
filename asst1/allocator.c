@@ -375,7 +375,7 @@ static Header freelist_bestfit(size_t size) {
 
 // Merges a chunk with its neighbours in the free list.
 static void freelist_merge_chunk(Header chunk) {
-    size_t offset = chunk - freelist_head;
+    size_t offset = (char*)chunk - (char*)buffer_base;
 
     // Because all sizes and offsets are a power of two, it suffices
     // to check if (offset & size) is zero or not.
