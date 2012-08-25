@@ -6,18 +6,18 @@
 // Complete solution for Assignment 1: memory allocator.
 
 // I have followed the asst spec almost to the letter, only departing
-// from it (as far as I can tell) only in my choice of types.
+// from it (as far as I can tell) only in my choice of types and names.
 
 // In particular, I have decided to use void* for the memory buffer
 // location, as it makes more sense than char*. However, char* has well-
-// defined pointer arithmetic, whereas void* arithmetic is unspecified.
-// So you will see some magic with repeated char* and void* casts.
-// Using void* makes sense for me, in this particular case.
+// defined pointer arithmetic, whereas void* arithmetic is undefined.
+// Using void* makes sense for me, for pointing to the memory buffer.
+// So you will see [some magic with] repeated char* and void* casts.
 
 // Further, I decided to use size_t instead of u_int32_t, for two
 // reasons.
 // First, it is shorter, and has a better name.
-// Second, it makes no difference anyway, as I've done a typedef.
+// Second, it makes no difference anyway.
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -26,11 +26,7 @@
 //    For example, set magic = CONST ^ size, or something.
 //    That will catch most (but not all) header corruptions.
 //
-// 2) Segregate different components into different files.
-//    There are 3 things here: allocator, free list, and chunks.
-//    While they are all interrelated, this file is too cluttered.
-//
-// 3) Add more tests.
+// 2) Add more tests.
 //    Currently, my tests don't test that merging works properly.
 //
 ////////////////////////////////////////////////////////////////////////
@@ -74,8 +70,8 @@ static size_t round_up_power_of_two(size_t size);
 static void*  get_user_memory(Header chunk);
 
 static Header chunk_create(void* where, size_t size);
-static int    chunk_is_free(Header chunk);
-static int    chunk_is_used(Header chunk);
+static void   chunk_ensure_free(Header chunk);
+static void   chunk_ensure_used(Header chunk);
 static size_t chunk_get_offset(Header chunk);
 
 static void   freelist_init(size_t size);
@@ -146,7 +142,7 @@ void* allocator_malloc(size_t size) {
     }
 
     // Ensure that the chunk we received was valid.
-    assert(chunk_is_free(chunk));
+    chunk_ensure_free(chunk);
     assert(size <= chunk->size);
 
     // Perform the split, or resize the request to attain a perfect fit.
@@ -183,7 +179,7 @@ void allocator_free(void* region) {
     Header chunk = (Header)((char*)region - sizeof(header));
 
     // Ensure the header is not corrupt.
-    assert(chunk_is_used(chunk));
+    chunk_ensure_used(chunk);
 
     // Mark it as free.
     chunk->magic = HEADER_FREE_MAGIC;
@@ -230,12 +226,18 @@ static size_t round_up_power_of_two(size_t num) {
 
 // Ensure that the magic field is properly set.
 // If chunk is NULL, pretend that magic matched.
-static int chunk_is_free(Header chunk) {
-    return chunk == NULL || chunk->magic == HEADER_FREE_MAGIC;
+static void chunk_ensure_free(Header chunk) {
+    if (chunk != NULL && chunk->magic != HEADER_FREE_MAGIC) {
+        fprintf(stderr, "allocator: expected free magic number\n");
+        abort();
+    }
 }
 
-static int chunk_is_used(Header chunk) {
-    return chunk == NULL || chunk->magic == HEADER_USED_MAGIC;
+static void chunk_ensure_used(Header chunk) {
+    if (chunk != NULL && chunk->magic != HEADER_USED_MAGIC) {
+        fprintf(stderr, "allocator: expected used magic number\n");
+        abort();
+    }
 }
 
 
