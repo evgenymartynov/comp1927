@@ -3,6 +3,11 @@
 // Date: 20 Aug 2012
 // Summary: Linked-list ADT implementation.
 
+// This was modified since I've demonstrated the code on Tuesday.
+// Primarily, I dropped the two-different-structs approach, and
+// simplified a small number of things.
+// No massive changes though.
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -16,28 +21,18 @@
 
 // Local struct typedefs
 
-typedef struct _node *Node;
-struct _node {
-    int value;
-    Node next;
-};
-
 struct _list {
-    Node head;
+    int value;
+    List next;
 };
-
 
 // Local prototypes
-static Node newNode(Node next, int value);
-static void freeNode(Node node);
-static void __attribute__((unused)) printList(Node head);
+static void __attribute__((unused)) printList(List head);
 
-static Node mergesortWorker(Node head);
-static Node insertionsortWorker(Node head);
-static Node quicksortWorker(Node head);
-
-static Node splitInHalf(Node head);
-static Node mergeLists(Node left, Node right);
+static List insertionSort(List head);
+static void partition(List head, List pivot, List *left, List *right);
+static List splitInHalf(List head);
+static List mergeLists(List left, List right);
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -49,27 +44,16 @@ static Node mergeLists(Node left, Node right);
 
 // Returns an empty list
 List createEmptyList(void) {
-    List list = (List)malloc(sizeof(*list));
-    assert(list != NULL);
-
-    list->head = NULL;
-
-    return list;
+    return NULL;
 }
 
 
-// Frees the entire list
+// Frees an entire list
 List freeList(List list) {
-    assert(list != NULL);
-
-    // Walk through the list, freeing node-by-node.
-    Node curr;
-    for (curr = list->head; curr != NULL; curr = curr->next) {
-        freeNode(curr);
+    if (list != NULL) {
+        freeList(list->next);
+        free(list);
     }
-
-    // Free the list struct as well.
-    free(list);
 
     // We have no way to ensure error-checking. Always return NULL.
     return NULL;
@@ -78,42 +62,37 @@ List freeList(List list) {
 
 // Prepends an item to a list
 List add(List list, int value) {
-    assert(list != NULL);
+    List newNode = (List)malloc(sizeof(*newNode));
+    assert(newNode != NULL);
 
-    Node node = newNode(list->head, value);
-    list->head = node;
+    newNode->next  = list;
+    newNode->value = value;
 
-    return list;
+    return newNode;
 }
 
 
 // Check if the list contains node with the given value.
 bool contains(List list, int searchValue) {
-    assert(list != NULL);
+    List curr;
 
-    bool found = FALSE;
-    Node curr;
-
-    // Walk through the list, checking every element.
-    for (curr = list->head; !found && curr != NULL; curr = curr->next) {
+    for (curr = list; curr != NULL; curr = curr->next) {
         if (curr->value == searchValue) {
-            found = TRUE;
+            return TRUE;
         }
     }
 
-    return found;
+    return FALSE;
 }
 
 
 // Calculate the size of the list.
 int size(List list) {
-    assert(list != NULL);
-
     int length = 0;
-    Node curr;
+    List curr;
 
     // Walk through the list, keeping track of how many nodes we've seen
-    for (curr = list->head; curr != NULL; curr = curr->next) {
+    for (curr = list; curr != NULL; curr = curr->next) {
         length++;
     }
 
@@ -123,8 +102,6 @@ int size(List list) {
 
 // Check if the list is in sorted order.
 bool isSorted(List list) {
-    assert(list != NULL);
-
     // An empty list is always sorted.
     if (size(list) == 0) {
         return TRUE;
@@ -132,11 +109,11 @@ bool isSorted(List list) {
 
     // We assume the list is sorted until proven otherwise.
     bool sorted = TRUE;
-    Node curr;
-    int prevValue = list->head->value;
+    List curr;
+    int prevValue = list->value;
 
     // Walk through the list, keeping track of the value previously seen
-    for (curr = list->head; sorted && curr != NULL; curr = curr->next) {
+    for (curr = list; sorted && curr != NULL; curr = curr->next) {
         if (curr->value <= prevValue) {
             sorted = FALSE;
         }
@@ -150,91 +127,30 @@ bool isSorted(List list) {
 
 // Copies the first n elements into the given array.
 void copyToArray(List list, int arr[], int n) {
-    assert(list != NULL);
-
-    Node curr;
+    List curr;
     int i;
 
     // Only check the first n nodes, or until we hit the end of the list
-    for (i = 0, curr = list->head; i < n && curr != NULL;
+    for (i = 0, curr = list; i < n && curr != NULL;
         i++, curr = curr->next) {
         arr[i] = curr->value;
     }
 }
 
 
-// Performs mergesort on the list.
-List mergesortList(List list) {
-    assert(list != NULL);
-
-    // We will drop the List abstraction for the sort, and instead
-    // work with individual Nodes. This might be unmaintainable, but
-    // that is the cleanest way of doing it, given the current ADT.
-    Node sortedHead = mergesortWorker(list->head);
-    list->head = sortedHead;
-
-    return list;
-}
-
-
-// Performs quicksort on the list.
-List quicksortList(List list) {
-    assert(list != NULL);
-
-    Node sortedHead = quicksortWorker(list->head);
-    list->head = sortedHead;
-
-    return list;
-}
-
-
-///////////////////////////////////////////////////////////////////////
-//
-// Internal implementation code starts here
-//
-///////////////////////////////////////////////////////////////////////
-
-
-// Creates a new node with the given parameters
-static Node newNode(Node next, int value) {
-    Node node = (Node)malloc(sizeof(*node));
-    assert(node != NULL);
-
-    node->next  = next;
-    node->value = value;
-
-    return node;
-}
-
-
-// Frees an allocated node
-static void freeNode(Node node) {
-    free(node);
-}
-
-
-// Displays the list starting from a given node.
-static void printList(Node head) {
-    for (; head != NULL; head = head->next) {
-        printf("<%d|%p> ", head->value, (void*)head);
-    }
-
-    printf("<X>\n");
-}
-
-
-// Performs mergesort on a list starting with the given node.
+// Performs mergesort on a list.
 // Note that this sort is in-place; it does not allocate any new nodes.
-static Node mergesortWorker(Node head) {
+List mergesortList(List list) {
     // If we are given an empty or one-node list, it is already sorted.
-    if (head == NULL || head->next == NULL) {
-        return head;
+    if (list == NULL || list->next == NULL) {
+        return list;
     }
 
     // Check if the length of this list is sufficiently small.
     // We only need to check the first MSORT_CUTOFF_LENGTH+1 nodes.
+    // We *could* defer to calling length(), but...
     int length = 0;
-    Node temp = head;
+    List temp = list;
     while (length <= MSORT_CUTOFF_LENGTH && temp != NULL) {
         length++;
         temp = temp->next;
@@ -242,62 +158,47 @@ static Node mergesortWorker(Node head) {
 
     // If the list is small, we insertion-sort it.
     if (length <= MSORT_CUTOFF_LENGTH) {
-        return insertionsortWorker(head);
+        return insertionSort(list);
     }
 
     // Otherwise, we run the standard mergesort procedure.
-    Node mid    = splitInHalf(head);
-    Node left   = mergesortWorker(head);
-    Node right  = mergesortWorker(mid);
-    Node sorted = mergeLists(left, right);
+    List mid    = splitInHalf(list);
+    List left   = mergesortList(list);
+    List right  = mergesortList(mid);
+    List sorted = mergeLists(left, right);
 
     return sorted;
 }
 
 
-// Performs quicksort with the first node taken as pivot.
-static Node quicksortWorker(Node head) {
+// Performs quicksort on the list.
+List quicksortList(List list) {
     // If we are given an empty or one-node list, it is already sorted.
-    if (head == NULL || head->next == NULL) {
-        return head;
+    if (list == NULL || list->next == NULL) {
+        return list;
     }
 
-    // Partition the list...
-    Node pivot = head;
-    Node curr = head->next;
-    Node left = NULL, right = NULL;
+    // Partition the list.
+    List left, right;
+    List pivot = list; // This is a poor choice for a pivot, but...
+    partition(list->next, pivot, &left, &right);
 
-    while (curr != NULL) {
-        Node next = curr->next;
-
-        // Smaller values go to the left, larger-or-equal to the right.
-        if (curr->value < pivot->value) {
-            curr->next = left;
-            left = curr;
-        } else {
-            curr->next = right;
-            right = curr;
-        }
-
-        curr = next;
-    }
-
-    // Now recurse
-    left  = quicksortWorker(left);
-    right = quicksortWorker(right);
+    // Sort the partitions.
+    left  = quicksortList(left);
+    right = quicksortList(right);
 
     // Join pivot to the right half.
     pivot->next = right;
     right = pivot;
 
     // Find the last node of the left list.
-    Node leftTail = left;
+    List leftTail = left;
     while (leftTail != NULL && leftTail->next != NULL) {
         leftTail = leftTail->next;
     }
 
     // Recombine the (possibly empty) left list with the right list.
-    Node sorted;
+    List sorted;
     if (left != NULL) {
         leftTail->next = right;
         sorted = left;
@@ -309,8 +210,47 @@ static Node quicksortWorker(Node head) {
 }
 
 
+///////////////////////////////////////////////////////////////////////
+//
+// Internal implementation code starts here
+//
+///////////////////////////////////////////////////////////////////////
+
+
+// Displays the list starting from a given node.
+static void printList(List head) {
+    for (; head != NULL; head = head->next) {
+        printf("<%d|%p> ", head->value, (void*)head);
+    }
+
+    printf("<X>\n");
+}
+
+
+// Partitions the list into smaller/notsmaller parts.
+static void partition(List head, List pivot, List *left, List *right) {
+    List curr = head;
+    *left = *right = NULL;
+
+    while (curr != NULL) {
+        List next = curr->next;
+
+        // Smaller values go to the left, larger-or-equal to the right.
+        if (curr->value < pivot->value) {
+            curr->next = *left;
+            *left = curr;
+        } else {
+            curr->next = *right;
+            *right = curr;
+        }
+
+        curr = next;
+    }
+}
+
+
 // Performs insertion sort on a list starting with the given node.
-static Node insertionsortWorker(Node head) {
+static List insertionSort(List head) {
     assert(head != NULL);
 
     // If the list one-long, it's sorted.
@@ -319,23 +259,23 @@ static Node insertionsortWorker(Node head) {
     }
 
     // Keep track of the rest of the list.
-    Node rest = head->next;
+    List rest = head->next;
 
     // And of the sorted list.
-    Node sortedHead = head;
+    List sortedHead = head;
     sortedHead->next = NULL;
 
     // While there are nodes to sort...
     while (rest != NULL) {
         // extract one node...
-        Node curr = rest;
+        List curr = rest;
         rest = rest->next;
         curr->next = NULL;
 
         // and find a spot where we should insert it.
         // It will go between prev and next:
-        Node prev = NULL;
-        Node next = sortedHead;
+        List prev = NULL;
+        List next = sortedHead;
         while (next != NULL && curr->value > next->value) {
             prev = next;
             next = next->next;
@@ -362,7 +302,7 @@ static Node insertionsortWorker(Node head) {
 
 
 // Splits the list in half, returns start of the right half.
-static Node splitInHalf(Node head) {
+static List splitInHalf(List head) {
     // If given an empty or degenerate list, there is no second half.
     if (head == NULL || head->next == NULL) {
         return NULL;
@@ -370,8 +310,8 @@ static Node splitInHalf(Node head) {
 
     // We walk along the list with two pointers, advancing the left ptr
     // by one step, and the right by two steps.
-    Node left = head, right = head;
-    Node prevLeft = NULL;
+    List left = head, right = head;
+    List prevLeft = NULL;
 
     while (right != NULL) {
         // Advance left by one
@@ -398,7 +338,7 @@ static Node splitInHalf(Node head) {
 
 
 // Merges two sorted lists into one and returns the head of sorted list.
-static Node mergeLists(Node left, Node right) {
+static List mergeLists(List left, List right) {
     // No-op on empty lists.
     if (left == NULL && right == NULL) {
         return NULL;
@@ -410,8 +350,8 @@ static Node mergeLists(Node left, Node right) {
 
     // Now we know that both lists are non-empty.
 
-    Node sorted = NULL;
-    Node tail = NULL;
+    List sorted = NULL;
+    List tail = NULL;
 
     // Work out the first node of the sorted list.
     if (left->value < right->value) {
