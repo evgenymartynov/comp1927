@@ -202,25 +202,16 @@ void allocator_free(void* region) {
 
 
 // Rounds up an integer to the next power of two.
-// Undefined behaviour occurs when 0 is given.
+// If num is larger than 1<<31, we be screwed.
 static size_t round_up_power_of_two(size_t num) {
-    int i;
-    for (i = sizeof(num)*8 - 1; i >= 0; i--) {
-        // If the ith bit is set...
-        if (num & (1 << i)) {
-            // and if it is not the only bit set
-            if (num ^ (1 << i)) {
-                num = 1 << (i+1);
-            }
+    size_t rounded = 1;
 
-            break;
-        }
+    // We check for overflows; unsigned-int overflows are well-defined.
+    while (rounded && rounded < num) {
+        rounded *= 2;
     }
 
-    // Sanity check that it is indeed a power of two
-    assert(__builtin_popcount(num) == 1);
-
-    return num;
+    return rounded;
 }
 
 
