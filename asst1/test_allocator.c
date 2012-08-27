@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "allocator.h"
 
 typedef u_int32_t size_t;
@@ -15,6 +18,7 @@ static void test_allocator_setup(void);
 static void test_allocator_malloc(void);
 static void test_allocator_no_reclamation(void);
 static void test_allocator_with_merge(void);
+static void test_allocator_magic_corruption(void);
 
 // Utility prototypes
 // Creates a new allocator of given size.
@@ -39,6 +43,7 @@ int main() {
     test_allocator_malloc();
     test_allocator_no_reclamation();
     test_allocator_with_merge();
+    test_allocator_magic_corruption();
 
     return EXIT_SUCCESS;
 }
@@ -336,6 +341,93 @@ static void test_allocator_with_merge(void) {
         allocator_free(rnd_two);
 
         test_end();
+    printf("Passed\n");
+}
+
+
+// Here we check that abort() is called if magic numbers are corrupted.
+// This will fork() to test, because SIGABRT can't be blocked.
+// We then check the exit status of the forked process.
+static void test_allocator_magic_corruption(void) {
+    printf("Testing magic-overwriting\n");
+
+        pid_t child;
+        const int test_sz = 2048;
+
+        printf("  clobber allocated header and then free\n");
+        test_begin(test_sz);
+            child = fork();
+            if (child != 0) {
+                int status = 0;
+                waitpid(child, &status, 0);
+
+                // Ensure SIGABRT was raised, i.e. abort() was called.
+                if (WTERMSIG(status) != SIGABRT) {
+                    assert(0 && "Allocator did not call abort() as expected");
+                } else {
+                    printf("  abort() was called, as expected\n");
+                }
+            } else {
+                // Clobber the header of the region.
+                char *reg = malloc_check(256 - HEADER_SIZE);
+                memset(reg-HEADER_SIZE, 0, HEADER_SIZE);
+
+                allocator_free(reg);
+
+                // At this point, we must have aborted.
+                // We exit w/failure as the parent expects SIGABRT.
+                exit(EXIT_FAILURE);
+            }
+        test_end();
+
+
+        printf("  clobber free header; then free and merge\n");
+        test_begin(test_sz);
+            child = fork();
+            if (child != 0) {
+                int status = 0;
+                waitpid(child, &status, 0);
+
+                if (WTERMSIG(status) != SIGABRT) {
+                    assert(0 && "Allocator did not call abort() as expected");
+                } else {
+                    printf("  abort() was called, as expected\n");
+                }
+            } else {
+                // Clobber.
+                char *reg = malloc_check(256 - HEADER_SIZE);
+                memset(reg - HEADER_SIZE + 256, 0, test_sz);
+
+                // Free and merge.
+                allocator_free(reg);
+                exit(EXIT_FAILURE);
+            }
+        test_end();
+
+
+        printf("  clobber non-adjacent free header; free, and merge\n");
+        test_begin(test_sz);
+            child = fork();
+            if (child != 0) {
+                int status = 0;
+                waitpid(child, &status, 0);
+
+                if (WTERMSIG(status) != SIGABRT) {
+                    assert(0 && "Allocator did not call abort() as expected");
+                } else {
+                    printf("  abort() was called, as expected\n");
+                }
+            } else {
+                // Clobber.
+                char *reg = malloc_check(256 - HEADER_SIZE);
+                memset(reg - HEADER_SIZE + 512, 0, test_sz - 512);
+
+                // Free and merge.
+                allocator_free(reg);
+                exit(EXIT_FAILURE);
+            }
+        test_end();
+
     printf("Passed\n");
 }
 
