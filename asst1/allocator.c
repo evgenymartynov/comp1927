@@ -77,6 +77,7 @@ static size_t chunk_get_offset(Header chunk);
 static void   freelist_init(size_t size);
 static void   freelist_destroy(void);
 static Header freelist_bestfit(size_t size);
+static Header freelist_firstfit(size_t size);
 static void   freelist_split_chunk(Header chunk, size_t size);
 static void   freelist_merge_chunk(Header chunk);
 static int    freelist_has_one_chunk(void);
@@ -136,7 +137,7 @@ void* allocator_malloc(size_t size) {
     size += sizeof(header);
 
     // Find a free chunk
-    Header chunk = freelist_bestfit(size);
+    Header chunk = freelist_firstfit(size);
     if (chunk == NULL) {
         return NULL;
     }
@@ -344,7 +345,7 @@ static void freelist_extract_chunk(Header chunk) {
 // Returns pointer to a corresponding header, or NULL if no chunk was
 // large enough.
 // Assumes the size of the header has already been accounted for.
-static Header freelist_bestfit(size_t size) {
+static Header __attribute__((unused)) freelist_bestfit(size_t size) {
     Header chunk = freelist_head;
     Header best_fit = NULL;
 
@@ -363,6 +364,26 @@ static Header freelist_bestfit(size_t size) {
     } while(chunk != freelist_head);
 
     return best_fit;
+}
+
+
+// First-fit finder for a free chunk.
+// Returns pointer to a corresponding header, or NULL if no chunk was
+// large enough.
+// Assumes the size of the header has already been accounted for.
+static Header __attribute__((unused)) freelist_firstfit(size_t size) {
+    Header chunk = freelist_head;
+
+    do {
+        if (chunk->size >= size) {
+            return chunk;
+        }
+
+        chunk = chunk->next;
+    } while(chunk != freelist_head);
+
+    // Didn't find anything.
+    return NULL;
 }
 
 
@@ -485,7 +506,7 @@ static void __attribute__((unused)) freelist_print_bar(void) {
         curr = curr->next;
     } while (curr != freelist_head);
 
-    printf("[");
+    printf("\n[");
         for (i = 0; display[i]; i++) {
             printf(display[i] == '-' ? COL_GRE : COL_RED);
             printf("%c" COL_WHITE, display[i]);
