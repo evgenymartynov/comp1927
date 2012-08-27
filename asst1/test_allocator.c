@@ -57,6 +57,12 @@ static void test_allocator_setup(void) {
         printf("  reallocating with not-power-of-2 memory\n");
         test_begin(1337);
         test_end();
+
+        printf("  check that re-initialising allocator does nothing\n");
+        test_begin(1024);
+        allocator_init(512);
+        test_end();
+
     printf("Passed\n");
 }
 
@@ -77,6 +83,10 @@ static void test_allocator_malloc(void) {
         malloc_check(128 - HEADER_SIZE);
         printf("  now allocate 1 extra byte\n");
         malloc_check(1);
+
+        printf("  check that re-initialising allocator does nothing\n");
+        allocator_init(1024);
+        malloc_check_fail(128 - HEADER_SIZE);
 
         test_end();
         test_begin(256);
