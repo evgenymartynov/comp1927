@@ -294,6 +294,10 @@ static void freelist_insert_chunk(Header chunk) {
         curr = curr->next;
     }
 
+    // Make sure the magics are preserved.
+    chunk_ensure_free(curr);
+    chunk_ensure_free(chunk);
+
     // Now, inserting before curr will maintain the order in the list.
     // Let's check that this is true.
     if (chunk < freelist_head) {
@@ -319,6 +323,9 @@ static void freelist_insert_chunk(Header chunk) {
     if (freelist_head > chunk) {
         freelist_head = chunk;
     }
+
+    // Finally, make sure the free list's magic is preserved.
+    chunk_ensure_free(freelist_head);
 }
 
 
@@ -409,6 +416,8 @@ static void freelist_merge_chunk(Header chunk) {
         // to us. If it is not, then we cannot merge (i.e. a used
         // region is in-between).
 
+        chunk_ensure_free(other_chunk);
+
         if (other_offset == expected_offset &&
                                     other_chunk->size == chunk->size) {
             // Resize the other chunk.
@@ -424,6 +433,8 @@ static void freelist_merge_chunk(Header chunk) {
         Header other_chunk = chunk->next;
         size_t other_offset = chunk_get_offset(other_chunk);
         size_t expected_offset = offset + chunk->size;
+
+        chunk_ensure_free(other_chunk);
 
         if (other_offset == expected_offset &&
                                     other_chunk->size == chunk->size) {
