@@ -409,7 +409,8 @@ static void freelist_merge_chunk(Header chunk) {
         // to us. If it is not, then we cannot merge (i.e. a used
         // region is in-between).
 
-        if (other_offset == expected_offset) {
+        if (other_offset == expected_offset &&
+                                    other_chunk->size == chunk->size) {
             // Resize the other chunk.
             other_chunk->size += chunk->size;
 
@@ -424,7 +425,8 @@ static void freelist_merge_chunk(Header chunk) {
         size_t other_offset = chunk_get_offset(other_chunk);
         size_t expected_offset = offset + chunk->size;
 
-        if (other_offset == expected_offset) {
+        if (other_offset == expected_offset &&
+                                    other_chunk->size == chunk->size) {
             chunk->size += other_chunk->size;
 
             freelist_extract_chunk(other_chunk);
