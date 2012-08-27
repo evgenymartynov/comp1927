@@ -389,7 +389,7 @@ static Header __attribute__((unused)) freelist_firstfit(size_t size) {
 
 // Merges a chunk with its neighbours in the free list.
 static void freelist_merge_chunk(Header chunk) {
-    size_t offset = (char*)chunk - (char*)buffer_base;
+    size_t offset = chunk_get_offset(chunk);
 
     // Because all sizes and offsets are a power of two, it suffices
     // to check if (offset & size) is zero or not.
