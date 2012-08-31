@@ -26,9 +26,6 @@
 //    For example, set magic = CONST ^ size, or something.
 //    That will catch most (but not all) header corruptions.
 //
-// 2) Add more tests.
-//    Currently, my tests don't test that merging works properly.
-//
 ////////////////////////////////////////////////////////////////////////
 
 #include <stdio.h>
@@ -58,9 +55,9 @@ typedef struct _header {
 } header;
 
 // Globals
-static void   *buffer_base = NULL;
-static size_t buffer_size;
-static Header freelist_head = NULL;
+static void   *memory = NULL;
+static size_t memory_size;
+static Header free_list_ptr = NULL;
 
 //
 // Local prototypes
@@ -100,18 +97,18 @@ static void freelist_print_bar(void);
 void allocator_init(size_t size) {
     // If was already initialised, then do nothing even if a different
     // size is used.
-    if (buffer_base != NULL) {
+    if (memory != NULL) {
         return;
     }
 
     // Round up allocation size to a power of two, if needed.
     assert(size > MIN_ALLOCATOR_SIZE);
     size = round_up_power_of_two(size);
-    buffer_size = size;
+    memory_size = size;
 
     // Allocate that chunk normally
-    buffer_base = malloc(size);
-    assert(buffer_base != NULL);
+    memory = malloc(size);
+    assert(memory != NULL);
 
     // Set up the free list
     freelist_init(size);
@@ -120,10 +117,10 @@ void allocator_init(size_t size) {
 
 // Destroy the allocator.
 void allocator_end(void) {
-    free(buffer_base);
+    free(memory);
 
-    buffer_base = NULL;
-    buffer_size = 0;
+    memory = NULL;
+    memory_size = 0;
     freelist_destroy();
 }
 
@@ -131,7 +128,7 @@ void allocator_end(void) {
 // Make me a sandwich
 void* allocator_malloc(size_t size) {
     // Make sure the allocator has been initialised.
-    assert(buffer_base != NULL);
+    assert(memory != NULL);
 
     // Add bookkeeping costs.
     size += sizeof(header);
@@ -157,7 +154,7 @@ void* allocator_malloc(size_t size) {
     // But if this is the only chunk in the free list, bail out.
     if (freelist_has_one_chunk()) {
         // This must be true, also.
-        assert(chunk == freelist_head);
+        assert(chunk == free_list_ptr);
 
         return NULL;
     }
@@ -246,7 +243,7 @@ static Header chunk_create(void* where, size_t size) {
 
 // Returns offset of a chunk relative to the buffer.
 static size_t chunk_get_offset(Header chunk) {
-    return (char*)chunk - (char*)buffer_base;
+    return (char*)chunk - (char*)memory;
 }
 
 
@@ -258,30 +255,30 @@ static void* get_user_memory(Header chunk) {
 
 // Initialises the free list for entire allocated region.
 static void freelist_init(size_t size) {
-    freelist_head = (Header)buffer_base;
-    chunk_create(buffer_base, size);
-    freelist_head->prev = freelist_head->next = freelist_head;
+    free_list_ptr = (Header)memory;
+    chunk_create(memory, size);
+    free_list_ptr->prev = free_list_ptr->next = free_list_ptr;
 }
 
 
 // Destroy the free list.
 static void freelist_destroy(void) {
     // No need to free memory, as it is part of the allocator region.
-    freelist_head = NULL;
+    free_list_ptr = NULL;
 }
 
 
 // Check if the free list has only one chunk in it.
 // This goes with the invariant as per the spec.
 static int freelist_has_one_chunk(void) {
-    return  freelist_head == freelist_head->prev &&
-            freelist_head == freelist_head->next;
+    return  free_list_ptr == free_list_ptr->prev &&
+            free_list_ptr == free_list_ptr->next;
 }
 
 
 // Inserts a given chunk in-order into the free list.
 static void freelist_insert_chunk(Header chunk) {
-    Header curr = freelist_head;
+    Header curr = free_list_ptr;
     int did_check = FALSE;
 
     // Work out where we want to insert the given chunk.
@@ -289,7 +286,7 @@ static void freelist_insert_chunk(Header chunk) {
     // But that alone is insufficient: if we free a chunk /after/ the
     // free list, then we get an infloop. Hence the second condition
     // and the did_check flag.
-    while (chunk > curr && (!did_check || curr != freelist_head)) {
+    while (chunk > curr && (!did_check || curr != free_list_ptr)) {
         did_check = TRUE;
         curr = curr->next;
     }
@@ -300,12 +297,12 @@ static void freelist_insert_chunk(Header chunk) {
 
     // Now, inserting before curr will maintain the order in the list.
     // Let's check that this is true.
-    if (chunk < freelist_head) {
+    if (chunk < free_list_ptr) {
         // Chunk is before the freelist
-        assert(curr == freelist_head);
-    } else if (chunk > freelist_head->prev) {
+        assert(curr == free_list_ptr);
+    } else if (chunk > free_list_ptr->prev) {
         // Chunk is after the freelist
-        assert(curr == freelist_head);
+        assert(curr == free_list_ptr);
     } else {
         // Chunk is in the middle of the free list
         assert(curr->prev < chunk && chunk < curr);
@@ -319,13 +316,13 @@ static void freelist_insert_chunk(Header chunk) {
     chunk->prev->next = chunk;
     chunk->next->prev = chunk;
 
-    // Shift the freelist_head to point to earliest chunk, if needed.
-    if (freelist_head > chunk) {
-        freelist_head = chunk;
+    // Shift the free_list_ptr to point to earliest chunk, if needed.
+    if (free_list_ptr > chunk) {
+        free_list_ptr = chunk;
     }
 
     // Finally, make sure the free list's magic is preserved.
-    chunk_ensure_free(freelist_head);
+    chunk_ensure_free(free_list_ptr);
 }
 
 
@@ -336,8 +333,8 @@ static void freelist_extract_chunk(Header chunk) {
 
     // We got to check if this is the head of the list, and if so,
     // we must update it.
-    if (chunk == freelist_head) {
-        freelist_head = freelist_head->next;
+    if (chunk == free_list_ptr) {
+        free_list_ptr = free_list_ptr->next;
     }
 
     chunk->prev->next = chunk->next;
@@ -353,7 +350,7 @@ static void freelist_extract_chunk(Header chunk) {
 // large enough.
 // Assumes the size of the header has already been accounted for.
 static Header __attribute__((unused)) freelist_bestfit(size_t size) {
-    Header chunk = freelist_head;
+    Header chunk = free_list_ptr;
     Header best_fit = NULL;
 
     // Styleguide is against do-while. Bite me.
@@ -368,7 +365,7 @@ static Header __attribute__((unused)) freelist_bestfit(size_t size) {
         }
 
         chunk = chunk->next;
-    } while(chunk != freelist_head);
+    } while(chunk != free_list_ptr);
 
     return best_fit;
 }
@@ -379,7 +376,7 @@ static Header __attribute__((unused)) freelist_bestfit(size_t size) {
 // large enough.
 // Assumes the size of the header has already been accounted for.
 static Header __attribute__((unused)) freelist_firstfit(size_t size) {
-    Header chunk = freelist_head;
+    Header chunk = free_list_ptr;
 
     do {
         if (chunk->size >= size) {
@@ -387,7 +384,7 @@ static Header __attribute__((unused)) freelist_firstfit(size_t size) {
         }
 
         chunk = chunk->next;
-    } while(chunk != freelist_head);
+    } while(chunk != free_list_ptr);
 
     // Didn't find anything.
     return NULL;
@@ -492,22 +489,22 @@ static void __attribute__((unused)) freelist_print(void) {
 
 // Displays the free list's nodes as a linked list.
 static void __attribute__((unused)) freelist_print_list(void) {
-    Header curr = freelist_head;
+    Header curr = free_list_ptr;
 
     do {
         printf("<"COL_BLU"%u"COL_WHITE"|%p> ", curr->size, (void*)curr);
         curr = curr->next;
-    } while (curr != freelist_head);
+    } while (curr != free_list_ptr);
 
     printf("\n");
 }
 
 // Displays ASCII-art-ish representation of the buffer utilisation.
 static void __attribute__((unused)) freelist_print_bar(void) {
-    Header curr = freelist_head;
+    Header curr = free_list_ptr;
     size_t i;
     size_t bytes_per_symbol = sizeof(*curr) * 2;
-    size_t display_width = buffer_size / bytes_per_symbol;
+    size_t display_width = memory_size / bytes_per_symbol;
 
     char *display = (char*)calloc(display_width + 1, 1);
     memset(display, 'X', display_width);
@@ -517,7 +514,7 @@ static void __attribute__((unused)) freelist_print_bar(void) {
         size_t chunk_begin = chunk_get_offset(curr) / bytes_per_symbol;
         memset(display + chunk_begin, '-', chunk_width);
         curr = curr->next;
-    } while (curr != freelist_head);
+    } while (curr != free_list_ptr);
 
     printf("\n[");
         for (i = 0; display[i]; i++) {
