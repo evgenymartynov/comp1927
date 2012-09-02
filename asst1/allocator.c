@@ -279,15 +279,10 @@ static int freelist_has_one_chunk(void) {
 // Inserts a given chunk in-order into the free list.
 static void freelist_insert_chunk(Header chunk) {
     Header curr = free_list_ptr;
-    int did_check = FALSE;
 
     // Work out where we want to insert the given chunk.
-    // That accounts for the chunk address comparison.
-    // But that alone is insufficient: if we free a chunk /after/ the
-    // free list, then we get an infloop. Hence the second condition
-    // and the did_check flag.
-    while (chunk > curr && (!did_check || curr != free_list_ptr)) {
-        did_check = TRUE;
+    // We pick the first chunk located after the one we were given.
+    while (chunk > curr && curr->next != free_list_ptr) {
         curr = curr->next;
     }
 
@@ -296,20 +291,6 @@ static void freelist_insert_chunk(Header chunk) {
     chunk_ensure_free(chunk);
 
     // Now, inserting before curr will maintain the order in the list.
-    // Let's check that this is true.
-    if (chunk < free_list_ptr) {
-        // Chunk is before the freelist
-        assert(curr == free_list_ptr);
-    } else if (chunk > free_list_ptr->prev) {
-        // Chunk is after the freelist
-        assert(curr == free_list_ptr);
-    } else {
-        // Chunk is in the middle of the free list
-        assert(curr->prev < chunk && chunk < curr);
-    }
-
-    // Now, insert the chunk.
-    // We need to insert the chunk before curr.
     chunk->prev = curr->prev;
     chunk->next = curr;
 
@@ -321,7 +302,7 @@ static void freelist_insert_chunk(Header chunk) {
         free_list_ptr = chunk;
     }
 
-    // Finally, make sure the free list's magic is preserved.
+    // Finally, make sure freelist's magic is preserved.
     chunk_ensure_free(free_list_ptr);
 }
 
