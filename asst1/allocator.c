@@ -73,7 +73,6 @@ static size_t chunk_get_offset(Header chunk);
 
 static void   freelist_init(size_t size);
 static void   freelist_destroy(void);
-static Header freelist_bestfit(size_t size);
 static Header freelist_firstfit(size_t size);
 static void   freelist_split_chunk(Header chunk, size_t size);
 static void   freelist_merge_chunk(Header chunk);
@@ -326,37 +325,11 @@ static void freelist_extract_chunk(Header chunk) {
 }
 
 
-// Locates a chunk that is sufficiently large for a requested size.
-// Returns pointer to a corresponding header, or NULL if no chunk was
-// large enough.
-// Assumes the size of the header has already been accounted for.
-static Header __attribute__((unused)) freelist_bestfit(size_t size) {
-    Header chunk = free_list_ptr;
-    Header best_fit = NULL;
-
-    // Styleguide is against do-while. Bite me.
-    // Go through all chunks in the free list.
-    do {
-        // If we can fit it
-        if (chunk->size >= size) {
-            // See if it is better than what we had before.
-            if (best_fit == NULL || chunk->size < best_fit->size) {
-                best_fit = chunk;
-            }
-        }
-
-        chunk = chunk->next;
-    } while(chunk != free_list_ptr);
-
-    return best_fit;
-}
-
-
 // First-fit finder for a free chunk.
 // Returns pointer to a corresponding header, or NULL if no chunk was
 // large enough.
 // Assumes the size of the header has already been accounted for.
-static Header __attribute__((unused)) freelist_firstfit(size_t size) {
+static Header freelist_firstfit(size_t size) {
     Header chunk = free_list_ptr;
 
     do {
