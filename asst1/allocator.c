@@ -17,14 +17,41 @@
 // Further, I decided to use size_t instead of u_int32_t, for two
 // reasons.
 // First, it is shorter, and has a better name.
-// Second, it makes no difference anyway.
+// Second, it makes no difference anyway (one is typedef of the other).
+
+// Also, the spec says to always check magic numbers of regions
+// when they are being handled. So you will see a *lot* of calls to
+// appropriate validating functions (chunk_ensure_free in particular)
+// all over the place.
+// That said, I have contained most of them to freelist_xxx methods,
+// leaving the high-level allocator_xxx logic clean.
+// As such, freelist_xxx will never return a region with invalid header.
 
 ////////////////////////////////////////////////////////////////////////
 //
-// Possible to-do list:
+// To-dos and ideas:
 // 1) Add more reliable error-checking to headers.
 //    For example, set magic = CONST ^ size, or something.
 //    That will catch most (but not all) header corruptions.
+//    However, that means that changing ->size will invalidate ->magic,
+//    which is annoying. It would be much easier to implement with
+//    proper getter/setter methods.
+//
+// 2) == Implemented ==
+//    More rigorous tests for everything.
+//    They were shared on openlearning and many students were using them
+//    to test their code.
+//
+// 3) == Implemented ==
+//    List-printing functions.
+//    Once again, shared on openlearning and adapted by students.
+//
+//    Still, these can be improved by adding loop-detection inside the
+//    freelist, as that was quite a common bug amongst the students.
+//
+//    The only issue is lack of styleguide-conformance to make things
+//    easier for me to write; these functions are added to the bottom of
+//    this file. They should not be marked on style, if at all.
 //
 ////////////////////////////////////////////////////////////////////////
 
