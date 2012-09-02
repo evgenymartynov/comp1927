@@ -162,34 +162,30 @@ void* allocator_malloc(size_t size) {
     // Find a free chunk
     Header chunk = freelist_firstfit(size);
     if (chunk == NULL) {
+        // ...returning NULL on failure
         return NULL;
     }
-
-    // Ensure that the chunk we received was valid.
-    chunk_ensure_free(chunk);
-    assert(size <= chunk->size);
 
     // Perform the split, or resize the request to attain a perfect fit.
     if (size + sizeof(header) > chunk->size) {
         size = chunk->size;
     } else {
         freelist_split_chunk(chunk, size);
-        assert(chunk->size >= size);
     }
+
+    // Sanity-check our chunk.
+    assert(size <= chunk->size);
 
     // But if this is the only chunk in the free list, bail out.
     if (freelist_has_one_chunk()) {
-        // This must be true, also.
-        assert(chunk == free_list_ptr);
-
         return NULL;
     }
 
-    // Mark the chunk as used.
-    chunk->magic = HEADER_USED_MAGIC;
-
-    // Remove it from the free list.
+    // Remove the chunk from the free list.
     freelist_extract_chunk(chunk);
+
+    // Mark it as used.
+    chunk->magic = HEADER_USED_MAGIC;
 
     freelist_print();
 
@@ -295,7 +291,6 @@ static void freelist_destroy(void) {
 
 
 // Check if the free list has only one chunk in it.
-// This goes with the invariant as per the spec.
 static int freelist_has_one_chunk(void) {
     return  free_list_ptr == free_list_ptr->prev &&
             free_list_ptr == free_list_ptr->next;
@@ -305,21 +300,21 @@ static int freelist_has_one_chunk(void) {
 // Inserts a given chunk in-order into the free list.
 static void freelist_insert_chunk(Header chunk) {
     Header curr = free_list_ptr;
+    chunk_ensure_free(curr);
 
     // Work out where we want to insert the given chunk.
     // We pick the first chunk located after the one we were given.
     while (chunk > curr && curr->next != free_list_ptr) {
         curr = curr->next;
+        chunk_ensure_free(curr);
     }
 
-    // Make sure the magics are preserved.
-    chunk_ensure_free(curr);
-    chunk_ensure_free(chunk);
+    // Double-check that the adjacent region is valid.
+    chunk_ensure_free(curr->prev);
 
     // Now, inserting before curr will maintain the order in the list.
     chunk->prev = curr->prev;
     chunk->next = curr;
-
     chunk->prev->next = chunk;
     chunk->next->prev = chunk;
 
@@ -327,9 +322,6 @@ static void freelist_insert_chunk(Header chunk) {
     if (free_list_ptr > chunk) {
         free_list_ptr = chunk;
     }
-
-    // Finally, make sure freelist's magic is preserved.
-    chunk_ensure_free(free_list_ptr);
 }
 
 
@@ -337,6 +329,11 @@ static void freelist_insert_chunk(Header chunk) {
 // Assumes that this is not the only chunk in the list.
 static void freelist_extract_chunk(Header chunk) {
     assert(!freelist_has_one_chunk());
+
+    // Make sure magic numbers match on adjacent chunks.
+    chunk_ensure_free(chunk);
+    chunk_ensure_free(chunk->prev);
+    chunk_ensure_free(chunk->next);
 
     // We got to check if this is the head of the list, and if so,
     // we must update it.
@@ -360,6 +357,10 @@ static Header freelist_firstfit(size_t size) {
     Header chunk = free_list_ptr;
 
     do {
+        // Check magic numbers.
+        chunk_ensure_free(chunk);
+
+        // Immediately return if a match was found.
         if (chunk->size >= size) {
             return chunk;
         }
@@ -390,12 +391,12 @@ static void freelist_merge_chunk(Header chunk) {
         size_t other_offset = chunk_get_offset(other_chunk);
         size_t expected_offset = offset - chunk->size;
 
+        chunk_ensure_free(chunk);
+        chunk_ensure_free(other_chunk);
+
         // We need to check if chunk immediately before us is adjacent
         // to us. If it is not, then we cannot merge (i.e. a used
         // region is in-between).
-
-        chunk_ensure_free(other_chunk);
-
         if (other_offset == expected_offset &&
                                     other_chunk->size == chunk->size) {
             // Resize the other chunk.
@@ -412,6 +413,7 @@ static void freelist_merge_chunk(Header chunk) {
         size_t other_offset = chunk_get_offset(other_chunk);
         size_t expected_offset = offset + chunk->size;
 
+        chunk_ensure_free(chunk);
         chunk_ensure_free(other_chunk);
 
         if (other_offset == expected_offset &&
@@ -452,7 +454,7 @@ static void freelist_split_chunk(Header chunk, size_t size) {
 
 ////////////////////////////////////////////////////////////////////////
 //
-// Debug functions, please ignore when marking.
+// Debug functions, please ignore horrid style when marking.
 //
 ////////////////////////////////////////////////////////////////////////
 
