@@ -235,7 +235,7 @@ static void test_allocator_with_merge(void) {
         printf("  allocate 512 bytes from merged\n");
         void* mrg_two = malloc_check(512 - HEADER_SIZE);
 
-        // 1 2 m1 5 m2 {256}
+        // 1 2 m1 5 {256} m2
 
         printf("  now we should have 256|256|512|256|{256}|512\n");
         printf("  make sure we can't allocate more\n");
@@ -248,7 +248,7 @@ static void test_allocator_with_merge(void) {
         printf("  allocate 512 bytes from merged\n");
         void* mrg_three = malloc_check(512 - HEADER_SIZE);
 
-        // m3 m1 5 m2 {256}
+        // m3 m1 5 {512} m2
 
         printf("  now we should have 512|512|256|{512}|256\n");
         printf("  make sure we can't allocate more\n");
@@ -258,7 +258,7 @@ static void test_allocator_with_merge(void) {
         allocator_free(mrg_three);
         allocator_free(mrg_one);
 
-        // {1024} 5 m2 {256}
+        // {1024} 5 {256} m2
 
         printf("  now we should have {1024}|256|{256}|512\n");
         printf("  request that merged chunk\n");
