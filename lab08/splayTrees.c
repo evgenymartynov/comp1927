@@ -262,11 +262,14 @@ void labPartTwo(void) {
     printf("Balanced tree with nodes 1..3:\n");
     printTree(tree);
 
-    // By similar logic, inserting the "middle" element last, for each
-    // subtree, produces a balanced outcome.
+    tree = newTree();
+    tree = splayInsert (tree,3);
+    tree = splayInsert (tree,2);
+    tree = splayInsert (tree,1);
+
+    tree = splayInsert (tree,6);
     tree = splayInsert (tree,5);
     tree = splayInsert (tree,7);
-    tree = splayInsert (tree,6);
 
     tree = splayInsert (tree,4);
 
