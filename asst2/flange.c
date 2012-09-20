@@ -107,24 +107,26 @@ void flange_render(int type_check, graphics_t *g, program_t *program,
 
 static vector_t vec_0 = {0, 0};
 
-static vector_t vec_add(vector_t a, vector_t b)
-{
-  return vec_0; // TODO: needs to be replaced
+static vector_t vec_add(vector_t a, vector_t b) {
+  a.x += b.x;
+  a.y += b.y;
+  return a;
 }
 
-static vector_t vec_sub(vector_t a, vector_t b)
-{
-  return vec_0; // TODO: needs to be replaced
+static vector_t vec_sub(vector_t a, vector_t b) {
+  a.x -= b.x;
+  a.y -= b.y;
+  return a;
 }
 
-static vector_t vec_scale(vector_t a, double c)
-{
-  return vec_0; // TODO: needs to be replaced
+static vector_t vec_scale(vector_t a, double c) {
+  a.x *= c;
+  a.y *= c;
+  return a;
 }
 
-static double vec_length(vector_t a)
-{
-  return 0.0; // TODO: needs to be replaced
+static double vec_length(vector_t a) {
+  return hypot(a.x, a.y);
 }
 
 //**************************************
