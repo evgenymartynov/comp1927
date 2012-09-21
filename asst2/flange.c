@@ -90,7 +90,7 @@ void flange_render(int type_check, graphics_t *g, program_t *program,
 
   // Draw a picture.
   graphics_picture_start(g, width, height);
-#if 0
+#if 1
   // TODO
   // when your rendering code is working,
   // replace the above line by #if 1
@@ -215,15 +215,36 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
     if (strcmp(datacons_tag(shape), "Circle") == 0) {
       double radius;
       vector_t center;
-      // TODO
-      // assign appropriate values to the above from the Circle datacons
+
+      // Grab the datacons
+      value_t *val_center = list_nth(datacons_params(shape), 0);
+      value_t *val_rad = list_nth(datacons_params(shape), 1);
+
+      // Extract the data
+      center.x = num_val((value_t*)list_nth(tuple_val(val_center), 0));
+      center.y = num_val((value_t*)list_nth(tuple_val(val_center), 1));
+      radius = num_val(val_rad);
+
+      // And render
       render_circle(c, center, radius);
     }
     else if (strcmp(datacons_tag(shape), "Line") == 0) {
       vector_t start;
       vector_t end;
-      // TODO
-      // assign appropriate values to the above from the Line datacons
+
+      // Grab the datacons
+      value_t *val_first = list_nth(datacons_params(shape), 0);
+      value_t *val_second = list_nth(datacons_params(shape), 1);
+      list_t *tup_first = tuple_val(val_first);
+      list_t *tup_second = tuple_val(val_second);
+
+      // Extract the data
+      start.x = num_val((value_t*)list_nth(tup_first, 0));
+      start.y = num_val((value_t*)list_nth(tup_first, 1));
+      end.x = num_val((value_t*)list_nth(tup_second, 0));
+      end.y = num_val((value_t*)list_nth(tup_second, 1));
+
+      // And render
       render_line(c, start, end);
     } else {
       printf("render_shape: unknown shape.\n");
