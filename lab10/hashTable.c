@@ -54,6 +54,7 @@ HashTable deleteHashTable(HashTable h) {
     for (i = 0; i < h->size; i++) {
         free(h->buckets[i]);
     }
+    free(h->buckets);
     free(h);
 
     return NULL;
