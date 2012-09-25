@@ -52,7 +52,7 @@ bool hashTableContains(Item i, HashTable h) {
 HashTable deleteHashTable(HashTable h) {
     int i;
     for (i = 0; i < h->size; i++) {
-        free(h->buckets[i]);
+        deleteList(h->buckets[i]);
     }
     free(h->buckets);
     free(h);
