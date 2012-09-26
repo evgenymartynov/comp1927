@@ -64,7 +64,7 @@ static void f_render(render_t *r, value_t *v);
 void flange_render(int type_check, graphics_t *g, program_t *program,
                    value_t *(*evaluate_program)(env_t *env, program_t *program))
 {
-  double width = 400, height = 400;
+  double width = 600, height = 600;
   list_t *fts = flange_types();
   env_t *env = flange_bindings();
   render_t r;
@@ -295,7 +295,17 @@ static void f_above(render_t *r, value_t *v)
   // p occupies n/(n+m) of window height
   // q occupies m/(n+m) of window height
 
-  // TODO: complete this function
+  double n = num_val((value_t*)list_nth(datacons_params(v), 0));
+  double m = num_val((value_t*)list_nth(datacons_params(v), 1));
+
+  render_t top = *r, bottom = *r;
+
+  bottom.left = vec_scale(bottom.left, m/(n+m));
+  top.left    = vec_scale(top.left, n/(n+m));
+  top.origin  = vec_add(top.origin, bottom.left);
+
+  f_render(&top,    list_nth(datacons_params(v), 2));
+  f_render(&bottom, list_nth(datacons_params(v), 3));
 }
 
 static void f_beside(render_t *r, value_t *v)
@@ -305,7 +315,17 @@ static void f_beside(render_t *r, value_t *v)
   // p occupies n/(n+m) of window width
   // q occupies m/(n+m) of window width
 
-  // TODO: complete this function
+  double n = num_val((value_t*)list_nth(datacons_params(v), 0));
+  double m = num_val((value_t*)list_nth(datacons_params(v), 1));
+
+  render_t left = *r, right = *r;
+
+  left.bottom  = vec_scale(left.bottom, n/(n+m));
+  right.bottom = vec_scale(right.bottom, m/(n+m));
+  right.origin = vec_add(right.origin, left.bottom);
+
+  f_render(&left,  list_nth(datacons_params(v), 2));
+  f_render(&right, list_nth(datacons_params(v), 3));
 }
 
 static void f_flip(render_t *r, value_t *v)
@@ -313,7 +333,13 @@ static void f_flip(render_t *r, value_t *v)
   // Flip p
   // reflect p in vertical axis bisecting window
 
-  // TODO: complete this function
+  value_t *param = list_nth(datacons_params(v), 0);
+
+  render_t flipped = *r;
+  flipped.origin = vec_add(flipped.origin, flipped.bottom);
+  flipped.bottom = vec_scale(flipped.bottom, -1);
+
+  f_render(&flipped, param);
 }
 
 static void f_overlay(render_t *r, value_t *v)
@@ -321,7 +347,8 @@ static void f_overlay(render_t *r, value_t *v)
   // Overlay p q
   // picture containing all elements of p and q
 
-  // TODO: complete this function
+  f_render(r, list_nth(datacons_params(v), 0));
+  f_render(r, list_nth(datacons_params(v), 1));
 }
 
 static void f_rotate(render_t *r, value_t *v)
@@ -329,7 +356,24 @@ static void f_rotate(render_t *r, value_t *v)
   // Rotate p
   // rotate p anticlockwise by 90 degree
 
-  // TODO: complete this function
+  value_t *param = list_nth(datacons_params(v), 0);
+
+  double len_ratio = vec_length(r->left) / vec_length(r->bottom);
+
+  render_t rotated;
+  rotated.g = r->g;
+
+  rotated.left.x    = -1 * r->left.y;
+  rotated.left.y    =      r->left.x;
+  rotated.left      = vec_scale(rotated.left, 1/len_ratio);
+
+  rotated.bottom.x  = -1 * r->bottom.y;
+  rotated.bottom.y  =      r->bottom.x;
+  rotated.bottom    = vec_scale(rotated.bottom, len_ratio);
+
+  rotated.origin    = vec_sub(r->origin, rotated.left);
+
+  f_render(&rotated, param);
 }
 
 static void f_render(render_t *r, value_t *v)
