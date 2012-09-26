@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/SVG/DTD/svg10.dtd">
+<!-- Rendered by FLANGE from stdin -->
+<svg
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   version="1.0"
+   viewBox="0 0 600 600"
+   width="100%"
+   height="100%">
+  <g stroke-width="1" stroke="green" transform="matrix(1 0 0 -1 0 600)">
+    <g transform="translate(300, 559)">
+      <ellipse rx="5" ry="120" fill="none" transform="rotate(90)"/>
+    </g>
+    <g transform="translate(300, 586)">
+      <ellipse rx="5" ry="120" fill="none" transform="rotate(90)"/>
+    </g>
+    <ellipse cx="300" cy="272" rx="120" ry="109" fill="none" />
+  </g>
+</svg>

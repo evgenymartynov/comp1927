@@ -1,0 +1,4 @@
+main =
+  let c :: Num -> Picture
+      c r = Canvas 100 100 [Circle (50, 50) r];
+   in Overlay (c 10) (c 20)
