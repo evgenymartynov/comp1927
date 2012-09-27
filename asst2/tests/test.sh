@@ -21,4 +21,6 @@ for fname in inputs/0*; do
     else
         printf "$fmtstr" $f "$FAIL"
     fi
+
+    rm -f image.svg
 done

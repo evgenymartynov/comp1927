@@ -129,6 +129,10 @@ static double vec_length(vector_t a) {
   return hypot(a.x, a.y);
 }
 
+static double vec_abs_cross_product(vector_t a, vector_t b) {
+  return fabs(a.x * b.y - a.y * b.x);
+}
+
 //**************************************
 // FLANGE drawing and geometry types and functions.
 //
