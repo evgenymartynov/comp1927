@@ -105,8 +105,6 @@ void flange_render(int type_check, graphics_t *g, program_t *program,
 //**************************************
 // Vector arithmetic over vector_t.
 
-static vector_t vec_0 = {0, 0};
-
 static vector_t vec_add(vector_t a, vector_t b) {
   a.x += b.x;
   a.y += b.y;
@@ -143,6 +141,7 @@ static double vec_abs_cross_product(vector_t a, vector_t b) {
 static char *flangeTypes =
   "data Shape = Circle (Num, Num) Num            \
               | Line (Num, Num) (Num, Num)       \
+              | Rectangle (Num, Num) (Num, Num)  \
    data Picture                                  \
               = Above Num Num Picture Picture    \
               | Beside Num Num Picture Picture   \
@@ -250,6 +249,31 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
 
       // And render
       render_line(c, start, end);
+    } else if (strcmp(datacons_tag(shape), "Rectangle") == 0) {
+      vector_t start, end, cornerA, cornerB;
+
+      // Grab the datacons
+      value_t *val_first = list_nth(datacons_params(shape), 0);
+      value_t *val_second = list_nth(datacons_params(shape), 1);
+      list_t *tup_first = tuple_val(val_first);
+      list_t *tup_second = tuple_val(val_second);
+
+      // Extract the data
+      start.x = num_val((value_t*)list_nth(tup_first, 0));
+      start.y = num_val((value_t*)list_nth(tup_first, 1));
+      end.x = num_val((value_t*)list_nth(tup_second, 0));
+      end.y = num_val((value_t*)list_nth(tup_second, 1));
+
+      cornerA.x = start.x;
+      cornerA.y = end.y;
+      cornerB.x = end.x;
+      cornerB.y = start.y;
+
+      // And render as 4 lines.
+      render_line(c, start, cornerA);
+      render_line(c, cornerA, end);
+      render_line(c, end, cornerB);
+      render_line(c, cornerB, start);
     } else {
       printf("render_shape: unknown shape.\n");
       print_value(stdout, shape);

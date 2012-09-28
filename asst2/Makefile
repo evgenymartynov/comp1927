@@ -33,6 +33,10 @@ tests: all
 	bash -c 'cd /tmp; $$OLDPWD/flan -g < $$OLDPWD/tasks/1b-tree.flan'
 	ls -sh /tmp/image.svg
 
+submit:
+	cp flange.c tasks/*.flan submission/
+	cd submission && give cs1927 ass2 flange.c *.flan
+
 all: flan
 
 flan: $(objects)
