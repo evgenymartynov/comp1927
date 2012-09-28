@@ -29,6 +29,10 @@ objects = builtins.o errors.o environment.o lexer.o list.o main.o parser.o \
 	  values.o eval-fos.o eval-hos.o eval-hol.o
 others = lexer.c lexer.h flan image.svg
 
+tests: all
+	bash -c 'cd /tmp; $$OLDPWD/flan -g < $$OLDPWD/tasks/1b-tree.flan'
+	ls -sh /tmp/image.svg
+
 all: flan
 
 flan: $(objects)

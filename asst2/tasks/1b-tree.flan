@@ -12,55 +12,66 @@ pow r p = if (p == 0)
             else r * (pow r (p-1))
           end;
 
-horSqueeze :: Num -> Picture -> Picture
-horSqueeze size pic =
-    Beside size (size+1) Empty (Beside 1 size pic Empty);
+cat :: [Shape] -> [Shape] -> [Shape]
+cat p q = match p with
+        []   -> q
+    |   x:xs -> x:(cat xs q)
+    end;
 
 treeHeight :: Tree -> Num
 treeHeight t =
     match t with
         Leaf num            -> 1
-    |   Node num left right -> 1 + max (treeHeight left) (treeHeight right)
+    |   Node num left right ->
+            1 + max (treeHeight left) (treeHeight right)
     end;
-
-drawLeaf :: Num -> Picture
-drawLeaf num = Canvas 100 100
-    [ (Line (15, 15) (85, 85) )
-    , (Line (15, 85) (85, 15) )
-    , (Circle (50, 50) 50)
-    ];
-
-drawNode :: Num -> Picture
-drawNode num = Canvas 100 100 [Circle (50, 50) 50];
-
-drawEdge :: Picture
-drawEdge = Canvas 100 100 [ Line (100, 100) (50, 0) ];
 
 drawTree :: Tree -> Picture
 drawTree root = let
-    auxDraw :: Tree -> Num -> Num -> Picture
-    auxDraw t height width = let
-            suspend :: Tree -> Picture
-            suspend t = Above 1 (2*height-3) (drawEdge) (auxDraw t (height-1) (width/2) );
-        in match t with
-            Leaf num            ->
-                    Above 1 (2*height-1)
-                        (horSqueeze (height-1) (drawLeaf num) )
-                        Empty
-        |   Node num left right ->
-                Above 1 (2*height-1)
-                    (horSqueeze (height-1) (drawNode num) )
-                    (Beside 1 1
-                        (suspend left)
-                        (Flip (suspend right))
-                    )
-        end;
-    rootHeight :: Num
-    rootHeight = treeHeight root;
-    in auxDraw root rootHeight (pow 2 (rootHeight-1));
+    csize :: Num
+    csize = 100;
 
-makeTree :: Tree
-makeTree = (Node 5 (Node 1 (Leaf 3) (Leaf 4)) (Leaf 2) );
+    height :: Num
+    height = treeHeight root;
+
+    radius :: Num
+    radius = csize / (pow 2 (height+1));
+
+    stripHeight :: Num
+    stripHeight = csize / (2*height - 1);
+
+    auxDraw :: Tree -> Num -> Num -> Num -> [Shape]
+    auxDraw t width top mid = match t with
+            Leaf num            -> [ (Circle (mid, top+radius) radius) ]
+        |   Node num left right -> let
+                leftMidX :: Num
+                leftMidX = mid - width/4;
+
+                rightMidX :: Num
+                rightMidX = mid + width/4;
+
+                childTopY :: Num
+                childTopY = top + 2*stripHeight;
+            in cat
+                [ Circle (mid, top+radius) radius
+                , Line (mid, top+2*radius) (leftMidX, childTopY)
+                , Line (mid, top+2*radius) (rightMidX, childTopY)
+                ]
+                (cat
+                    (auxDraw left  (width/2) childTopY leftMidX)
+                    (auxDraw right (width/2) childTopY rightMidX)
+                )
+        end;
+in Canvas csize csize (auxDraw root csize 0 (csize/2));
+
+makeFullTree :: Num -> Tree
+makeFullTree depth = let
+    auxGenerator :: Num -> Tree
+    auxGenerator num = match num with
+        0 -> (Leaf 0)
+    |   x -> (Node x (auxGenerator (x-1)) (auxGenerator (x-1)) )
+    end;
+in auxGenerator depth;
 
 makeBigTree :: Tree
 makeBigTree =
@@ -75,7 +86,7 @@ makeBigTree =
                 )
             )
         )
-        (Leaf 2)
+        (makeFullTree 3)
     );
 
 main = drawTree makeBigTree
