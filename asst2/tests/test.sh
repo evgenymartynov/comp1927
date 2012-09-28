@@ -13,7 +13,7 @@ PASS="[\033[1;32mPASS$DEF]"
 
 if [[ ! -x $bin ]]; then echo "Not executable: $bin"; exit 1; fi
 
-for fname in inputs/0*; do
+for fname in inputs/*; do
     f=$(basename $fname)
 
     if "$bin" -g < "$fname" > /dev/null && diff -y --suppress-common-lines -W 200 image.svg "outputs/$f"; then
