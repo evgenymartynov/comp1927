@@ -54,6 +54,14 @@ typedef struct {
 } render_t;
 
 
+// LEAK ALL THE ABSTRACTIONS
+struct graphics {
+  FILE *outf;
+  char *filename;
+  char *sourcefile;
+};
+
+
 //**************************************
 // Top-level: render a FLANGE picture.
 
@@ -142,6 +150,8 @@ static char *flangeTypes =
   "data Shape = Circle (Num, Num) Num            \
               | Line (Num, Num) (Num, Num)       \
               | Rectangle (Num, Num) (Num, Num)  \
+              | FilledPolygon (Num, Num, Num)    \
+                              [(Num, Num)]       \
    data Picture                                  \
               = Above Num Num Picture Picture    \
               | Beside Num Num Picture Picture   \
@@ -205,6 +215,28 @@ static void render_line(canvas_closure_t *c, vector_t j, vector_t k)
                 	vec_scale(r->left, k.y / c->height));
 
   graphics_line(r->g, newStart, newEnd);
+}
+
+static void render_poly_begin(canvas_closure_t *c, double red, double gre, double blu) {
+  fprintf(c->r->g->outf,
+    "<polygon fill=\"rgb(%d, %d, %d)\" points=\"",
+    (int)red, (int)gre, (int)blu);
+}
+
+static void render_poly_emit_point(canvas_closure_t *c, vector_t v) {
+  render_t *r = c->r;
+  // transformed origin and radius using render vectors
+  vector_t coord = vec_add(
+    vec_add(r->origin, vec_scale(r->bottom, v.x / c->width)),
+    vec_scale(r->left, v.y / c->height)
+  );
+
+  fprintf(c->r->g->outf,
+    "%.3lf,%.3lf ", coord.x, coord.y);
+}
+
+static void render_poly_end(canvas_closure_t *c) {
+  fprintf(c->r->g->outf, "\" />\n");
 }
 
 static int render_shape(canvas_closure_t *c, value_t *shape)
@@ -274,6 +306,35 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
       render_line(c, cornerA, end);
       render_line(c, end, cornerB);
       render_line(c, cornerB, start);
+    } else if (strcmp(datacons_tag(shape), "FilledPolygon") == 0) {
+      // Grab the datacons
+      value_t *val_colour = list_nth(datacons_params(shape), 0);
+      list_t *tup_colour = tuple_val(val_colour);
+
+      // Colour...
+      double red, gre, blu;
+      red = num_val((value_t*)list_nth(tup_colour, 0));
+      gre = num_val((value_t*)list_nth(tup_colour, 1));
+      blu = num_val((value_t*)list_nth(tup_colour, 2));
+
+      render_poly_begin(c, red, gre, blu);
+
+      // WTFlan. Dark magic inside this loop.
+      value_t *v = list_nth((list_t*)datacons_params(shape), 1);
+      while (v->type == v_datacons
+            && (strcmp(datacons_tag(v), listConsTag) == 0)) {
+        value_t *temp = list_head(datacons_params(v));
+        list_t *tup = tuple_val(temp);
+
+        vector_t point;
+        point.x = num_val((value_t*)list_nth(tup, 0));
+        point.y = num_val((value_t*)list_nth(tup, 1));
+        render_poly_emit_point(c, point);
+
+        v = thunk_force(list_nth(datacons_params(v), 1));
+      }
+
+      render_poly_end(c);
     } else {
       printf("render_shape: unknown shape.\n");
       print_value(stdout, shape);

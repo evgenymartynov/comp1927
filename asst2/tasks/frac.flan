@@ -1,0 +1,50 @@
+centerHor :: Num -> Picture -> Picture
+centerHor r pic =
+    Beside (r/2) (r/2 + 1)
+        Empty
+        (Beside 1 (r/2) pic Empty);
+
+pow :: Num -> Num -> Num
+pow r p = if (p == 0)
+            then 1
+            else r * (pow r (p-1))
+          end;
+
+abs :: Num -> Num
+abs x = if x < 0 then 0-x else x end;
+
+sierpinski :: Picture
+sierpinski = let
+    threshold :: Num
+    threshold = 5;
+
+    sidelength :: Num
+    sidelength = pow 2 threshold;
+
+    triangle :: Picture
+    triangle = Canvas 1 1
+        [ Line (0, 0)   (0.5, 1)
+        , Line (0.5, 1) (1, 0)
+        , Line (1, 0)   (0, 0)
+        ];
+
+    auxSier :: Num -> Num -> Num -> Num -> Picture
+    auxSier level x y width = if level == threshold
+        then Canvas 1 1 [
+                --FilledPolygon (y*40, 0, 0)
+                FilledPolygon
+                    ( (sidelength-x)*256/sidelength, y*256/sidelength, (x+y)*256/(sidelength))
+
+                    [ (0, 0), (0.5, 1), (1, 0) ]
+            ]
+        else
+            Above 1 1
+                (centerHor 1 (auxSier (level+1) (x+width/4) (y+width/2) (width/2) ) )
+                (Beside 1 1
+                    (auxSier (level+1) x y              (width/2) )
+                    (auxSier (level+1) (x+width/2) y    (width/2) )
+                )
+        end;
+in auxSier 0 0 0 sidelength;
+
+main = sierpinski

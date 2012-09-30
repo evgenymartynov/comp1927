@@ -69,8 +69,8 @@ void graphics_picture_end(graphics_t *g)
 void graphics_line(graphics_t *g, vector_t start, vector_t end)
 {
   fprintf(g->outf,
-          "    <line x1=\"%d\" y1=\"%d\" x2=\"%d\" y2=\"%d\" />\n",
-          (int)start.x, (int)start.y, (int)end.x, (int)end.y);
+          "    <line x1=\"%.3lf\" y1=\"%.3lf\" x2=\"%.3lf\" y2=\"%.3lf\" />\n",
+          (double)start.x, (double)start.y, (double)end.x, (double)end.y);
 }
 
 void graphics_ellipse(graphics_t *g,
