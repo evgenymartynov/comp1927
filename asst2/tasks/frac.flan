@@ -31,9 +31,11 @@ sierpinski = let
     auxSier :: Num -> Num -> Num -> Num -> Picture
     auxSier level x y width = if level == threshold
         then Canvas 1 1 [
-                --FilledPolygon (y*40, 0, 0)
                 FilledPolygon
-                    ( (sidelength-x)*256/sidelength, y*256/sidelength, (x+y)*256/(sidelength))
+                    ( 256 - (abs (sidelength/2 - x) + abs (sidelength - y)) * 256 / 1.5 /sidelength
+                    , 256 - ((sidelength-x) + 0.5*y) * 256/(sidelength)
+                    , 256 - (x + 0.5*y) * 256/(sidelength)
+                    )
 
                     [ (0, 0), (0.5, 1), (1, 0) ]
             ]
