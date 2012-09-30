@@ -1,0 +1,116 @@
+overlayFour :: Picture -> Picture -> Picture -> Picture -> Picture
+overlayFour a b c d =
+    Above 1 1
+    (Beside 1 1 a b)
+    (Beside 1 1 c d)
+;
+
+drawFractal ::
+    (Num -> Num -> Num -> Num -> Num) ->
+    (Num -> Num -> Num -> Num -> Num) ->
+    Num -> Num -> Num -> Picture
+drawFractal xGenerator yGenerator cx cy zoomWidth = let
+    maxIter :: Num
+    maxIter = 150;
+
+    colscale :: Num
+    colscale = 256 / maxIter;
+
+    numIterations :: Num -> Num -> Num
+    numIterations px py = let
+        auxConverges :: Num -> Num -> Num -> Num
+        auxConverges x y iter =
+            if (iter == maxIter || ((x*x) + (y*y)) > 4) then
+                iter
+            else
+                auxConverges
+                    (xGenerator x y px py)
+                    (yGenerator x y px py)
+                    (iter+1)
+            end;
+    in auxConverges px py 0;
+
+    colours :: Num -> (Num, Num, Num)
+    colours n =
+        ( ((n * colscale) * 1 % 256)
+        , ((n * colscale) * 1.5 % 256)
+        , ((n * colscale) * 2 % 256)
+        );
+
+    polyOrEmpty :: [(Num, Num)] -> Num -> Num -> Picture
+    polyOrEmpty points x y =
+        if (numIterations x y) < maxIter then
+            Canvas 100 100 [
+                FilledPolygon (colours (numIterations x y) ) points
+            ]
+        else
+            Empty
+        end;
+
+    triangleUp :: Num -> Num -> Num -> Num -> Picture
+    triangleUp x1 y1 x2 y2 =
+        polyOrEmpty
+            [ (0, 0) , (0, 100) , (100, 100) ]
+            ((x1+x2+x1)/3)
+            ((y1+y2+y2)/3);
+
+    triangleDown :: Num -> Num -> Num -> Num -> Picture
+    triangleDown x1 y1 x2 y2 =
+        polyOrEmpty
+            [ (0, 0) , (100, 0) , (100, 100) ]
+            ((x1+x2+x2)/3)
+            ((y1+y2+y1)/3);
+
+    auxDraw :: Num -> Num -> Num -> Num -> Num -> Picture
+    auxDraw x1 x2 y1 y2 depth =
+        if depth == 0 then
+            polyOrEmpty [(0, 0), (100, 0), (100, 100), (0, 100)] x1 y2
+            --Overlay
+            --    (triangleUp   x1 y1 x2 y2)
+            --    (triangleDown x1 y1 x2 y2)
+        else
+            overlayFour
+                (auxDraw x1 (x1 + (x2-x1)/2)   y1 (y1 + (y2-y1)/2) (depth-1) )
+                (auxDraw (x1 + (x2-x1)/2) x2   y1 (y1 + (y2-y1)/2) (depth-1) )
+                (auxDraw x1 (x1 + (x2-x1)/2)   (y1 + (y2-y1)/2) y2 (depth-1) )
+                (auxDraw (x1 + (x2-x1)/2) x2   (y1 + (y2-y1)/2) y2 (depth-1) )
+        end
+    ;
+in auxDraw (cx-zoomWidth) (cx+zoomWidth) (cy-zoomWidth) (cy+zoomWidth) 6;
+
+
+julia :: Picture
+julia = let
+    juliaXStep :: Num -> Num -> Num -> Num -> Num
+    juliaXStep x y px py = (x*x - y*y + (0-0.8));
+    juliaYStep :: Num -> Num -> Num -> Num -> Num
+    juliaYStep x y px py = (2*y*x + (0.156));
+in drawFractal juliaXStep juliaYStep 0 0 0.5;
+
+julia2 :: Picture
+julia2 = let
+    julia2XStep :: Num -> Num -> Num -> Num -> Num
+    julia2XStep x y px py = (x*x - y*y + (0-0.4));
+    julia2YStep :: Num -> Num -> Num -> Num -> Num
+    julia2YStep x y px py = (2*y*x + (0.6));
+in drawFractal julia2XStep julia2YStep (0-0.335) 0.35 0.20;
+
+julia3 :: Picture
+julia3 = let
+    julia3XStep :: Num -> Num -> Num -> Num -> Num
+    julia3XStep x y px py = (x*x - y*y + (0.285));
+    julia3YStep :: Num -> Num -> Num -> Num -> Num
+    julia3YStep x y px py = (2*y*x + (0.01));
+in drawFractal julia3XStep julia3YStep (0-0.6) (0-0.3) 0.25;
+
+mandel :: Picture
+mandel = let
+    mandelXStep :: Num -> Num -> Num -> Num -> Num
+    mandelXStep x y px py = (x*x - y*y + px);
+    mandelYStep :: Num -> Num -> Num -> Num -> Num
+    mandelYStep x y px py = (2*y*x     + py);
+in drawFractal mandelXStep mandelYStep (0-0.745) 0.15 0.005;
+
+main = overlayFour
+    julia julia2
+    mandel julia3

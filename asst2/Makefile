@@ -30,7 +30,7 @@ objects = builtins.o errors.o environment.o lexer.o list.o main.o parser.o \
 others = lexer.c lexer.h flan image.svg
 
 tests: all
-	bash -c 'cd /tmp; $$OLDPWD/flan -g < $$OLDPWD/tasks/mandelbrot.flan'
+	bash -c 'cd /tmp; $$OLDPWD/flan -g < $$OLDPWD/tasks/fractals.flan'
 	ls -sh /tmp/image.svg
 
 submit:
