@@ -9,7 +9,7 @@ CFLAGS  = -Wall -ggdb
 CFLAGS += -pedantic
 CFLAGS += -std=c99
 #CFLAGS += -fmudflap
-#CFLAGS += -O2
+CFLAGS += -O2
 LDFLAGS = -lm
 
 # Define these if you want to use the Boehm garbage collector.
@@ -30,7 +30,7 @@ objects = builtins.o errors.o environment.o lexer.o list.o main.o parser.o \
 others = lexer.c lexer.h flan image.svg
 
 tests: all
-	bash -c 'cd /tmp; $$OLDPWD/flan -g < $$OLDPWD/tasks/frac.flan'
+	bash -c 'cd /tmp; $$OLDPWD/flan -g < $$OLDPWD/tasks/mandelbrot.flan'
 	ls -sh /tmp/image.svg
 
 submit:

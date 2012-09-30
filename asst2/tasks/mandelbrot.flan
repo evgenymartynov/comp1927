@@ -1,0 +1,98 @@
+mandel :: Picture
+mandel = let
+    maxIter :: Num
+    maxIter = 200;
+
+    colscale :: Num
+    colscale = 256 / maxIter;
+
+    converges :: Num -> Num -> Num
+    converges px py = let
+        auxConverges :: Num -> Num -> Num -> Num
+        auxConverges x y iter =
+            if (iter == maxIter || ((x*x) + (y*y)) > 4) then
+                iter
+            else
+                auxConverges
+                    (x*x - y*y + px)
+                    (2*y*x     + py)
+                    (iter+1)
+            end;
+    in auxConverges 0 0 0;
+
+    colours :: Num -> (Num, Num, Num)
+    colours n =
+        ( ((n * colscale) * 1 % 256)
+        , ((n * colscale) * 1.5 % 256)
+        , ((n * colscale) * 2 % 256)
+        );
+
+    polyOrEmpty :: [(Num, Num)] -> Num -> Num -> Picture
+    polyOrEmpty points x y =
+        if (converges x y) < maxIter then
+            Canvas 100 100 [
+                FilledPolygon
+                    (colours (converges x y) )
+                    points
+                ]
+        else
+            Empty
+        end;
+
+    triangleUp :: Num -> Num -> Num -> Num -> Picture
+    triangleUp x1 y1 x2 y2 = let
+        x :: Num
+        x = (x1+x2+x1)/3;
+        y :: Num
+        y = (y1+y2+y2)/3;
+    in polyOrEmpty
+            [ (0, 0)
+            , (0, 100)
+            , (100, 100)
+            ] x y;
+
+    triangleDown :: Num -> Num -> Num -> Num -> Picture
+    triangleDown x1 y1 x2 y2 = let
+        x :: Num
+        x = (x1+x2+x2)/3;
+        y :: Num
+        y = (y1+y2+y1)/3;
+    in polyOrEmpty
+            [ (0, 0)
+            , (100, 0)
+            , (100, 100)
+            ] x y;
+
+    auxMandel :: Num -> Num -> Num -> Num -> Num -> Picture
+    auxMandel x1 x2 y1 y2 depth =
+        if depth == 0 then
+            --polyOrEmpty [ (0, 0)
+            --, (0, 100)
+            --, (100, 100)
+            --, (100, 0)
+            --] x1 y1
+            Overlay
+                (triangleUp   x1 y1 x2 y2)
+                (triangleDown x1 y1 x2 y2)
+        else
+            Above 1 1
+                (Beside 1 1
+                    (auxMandel x1 (x1 + (x2-x1)/2)   y1 (y1 + (y2-y1)/2) (depth-1) )
+                    (auxMandel (x1 + (x2-x1)/2) x2   y1 (y1 + (y2-y1)/2) (depth-1) )
+                )
+                (Beside 1 1
+                    (auxMandel x1 (x1 + (x2-x1)/2)   (y1 + (y2-y1)/2) y2 (depth-1) )
+                    (auxMandel (x1 + (x2-x1)/2) x2   (y1 + (y2-y1)/2) y2 (depth-1) )
+                )
+        end
+    ;
+
+    zoom :: Num -> Num -> Num -> Picture
+    zoom cx cy level = auxMandel
+        (cx-level) (cx+level)
+        (cy-level) (cy+level)
+        7;
+in zoom (0-0.745) 0.15 0.005;
+--in zoom (0-0.75) 0 1.25;
+
+main = mandel
