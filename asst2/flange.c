@@ -219,7 +219,7 @@ static void render_line(canvas_closure_t *c, vector_t j, vector_t k)
 
 static void render_poly_begin(canvas_closure_t *c, double red, double gre, double blu) {
   fprintf(c->r->g->outf,
-    "<polygon fill=\"rgb(%d, %d, %d)\" points=\"",
+    "<polygon fill=\"rgb(%d, %d, %d)\" stroke=\"none\" points=\"",
     (int)red, (int)gre, (int)blu);
 }
 
