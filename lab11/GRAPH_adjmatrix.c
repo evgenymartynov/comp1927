@@ -94,6 +94,13 @@ void GRAPHEdgePrint(Edge edge) {
     printf("%d -- %d", edge.v, edge.w);
 }
 
+#if false
+#undef true
+#undef false
+#define true 1
+#define false 0
+#endif
+
 static bool dfs(Graph g, bool *seen, int v, int w) {
     if (v == w)  return true;
     if (seen[v]) return false;
