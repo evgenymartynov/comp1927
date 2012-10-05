@@ -1,5 +1,5 @@
-overlayFour :: Picture -> Picture -> Picture -> Picture -> Picture
-overlayFour a b c d =
+displayFour :: Picture -> Picture -> Picture -> Picture -> Picture
+displayFour a b c d =
     Above 1 1
     (Beside 1 1 a b)
     (Beside 1 1 c d)
@@ -69,7 +69,7 @@ drawFractal xGenerator yGenerator cx cy zoomWidth = let
             --    (triangleUp   x1 y1 x2 y2)
             --    (triangleDown x1 y1 x2 y2)
         else
-            overlayFour
+            displayFour
                 (auxDraw x1 (x1 + (x2-x1)/2)   y1 (y1 + (y2-y1)/2) (depth-1) )
                 (auxDraw (x1 + (x2-x1)/2) x2   y1 (y1 + (y2-y1)/2) (depth-1) )
                 (auxDraw x1 (x1 + (x2-x1)/2)   (y1 + (y2-y1)/2) y2 (depth-1) )
@@ -111,6 +111,6 @@ mandel = let
     mandelYStep x y px py = (2*y*x     + py);
 in drawFractal mandelXStep mandelYStep (0-0.745) 0.15 0.005;
 
-main = overlayFour
+main = displayFour
     julia julia2
     mandel julia3
