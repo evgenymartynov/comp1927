@@ -1,0 +1,56 @@
+polyline :: [(Num, Num)] -> [Shape]
+polyline list = let
+    aux :: (Num, Num) -> [(Num, Num)] -> [Shape]
+    aux prev list = match list with
+        []   -> []
+    |   x:xs -> (Line prev x):(aux x xs)
+    end;
+in match list with
+    x:xs -> aux x xs
+end;
+
+overlayList :: [Picture] -> Picture
+overlayList pics = match pics with
+    []   -> Empty
+|   x:xs -> Overlay x (overlayList xs)
+end;
+
+koch :: Num -> Picture
+koch zlevel = let
+    aux :: Num -> Num -> Num -> Num -> Num -> Picture
+    aux zoom sx sy ex ey = let
+        hsqr    :: Num hsqr    = 0.866025404; -- sqrt(3)/2; used in poor-man's trig
+        dx :: Num dx = ex-sx;
+        dy :: Num dy = ey-sy;
+
+        firstx  :: Num firstx  = (2*sx+ex)/3;
+        firsty  :: Num firsty  = (2*sy+ey)/3;
+        secondx :: Num secondx = (sx+2*ex)/3;
+        secondy :: Num secondy = (sy+2*ey)/3;
+        midx :: Num midx = firstx + (dx/3)/2 - (dy/3)*hsqr;
+        midy :: Num midy = firsty + (dy/3)/2 + (dx/3)*hsqr;
+
+        finalisePattern :: Picture
+        --finalisePattern = Canvas 100 100 (polyline [
+        --    (sx, sy), (firstx, firsty), (midx, midy), (secondx, secondy), (ex, ey)
+        --]);
+        finalisePattern = Canvas 100 100 [
+            Line (sx, sy) (firstx, firsty),
+            FilledPolygon (midx*3, midy*3, 0) [(firstx, firsty), (midx, midy), (secondx, secondy)],
+            Line (secondx, secondy) (ex, ey)
+        ];
+    in if (zoom > 0) then overlayList
+        [ (aux (zoom-1) sx sy firstx firsty)
+        , (aux (zoom-1) firstx firsty midx midy)
+        , (aux (zoom-1) midx midy secondx secondy)
+        , (aux (zoom-1) secondx secondy ex ey)
+        ]
+        else finalisePattern
+    end;
+in overlayList
+    [ (aux zlevel 15 70 85 70)
+    , (aux zlevel 50 9.3782 15 70)
+    , (aux zlevel 85 70 50 9.3782)
+    ];
+
+main = koch 2
