@@ -36,4 +36,9 @@ void graphics_ellipse(graphics_t *g,
                       double xradius, double yradius,
                       vector_t orientation);
 
+// Draws a filled polygon with a given colour.
+void graphics_poly_begin(graphics_t *g, double red, double gre, double blu);
+void graphics_poly_emit_point(graphics_t *g, vector_t coord);
+void graphics_poly_end(graphics_t *g);
+
 #endif // _GRAPHICS_H_

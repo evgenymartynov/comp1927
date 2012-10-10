@@ -96,3 +96,17 @@ void graphics_ellipse(graphics_t *g,
             (int)centre.x, (int)centre.y, (int)xradius, (int)yradius, angle);
   }
 }
+
+void graphics_poly_begin(graphics_t *g, double red, double gre, double blu) {
+  fprintf(g->outf,
+    "<polygon fill=\"rgb(%d, %d, %d)\" stroke=\"none\" points=\"",
+    (int)red, (int)gre, (int)blu);
+}
+
+void graphics_poly_emit_point(graphics_t *g, vector_t coord) {
+  fprintf(g->outf, "%.3lf,%.3lf ", coord.x, coord.y);
+}
+
+void graphics_poly_end(graphics_t *g) {
+  fprintf(g->outf, "\" />\n");
+}

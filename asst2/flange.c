@@ -54,14 +54,6 @@ typedef struct {
 } render_t;
 
 
-// LEAK ALL THE ABSTRACTIONS
-struct graphics {
-  FILE *outf;
-  char *filename;
-  char *sourcefile;
-};
-
-
 //**************************************
 // Top-level: render a FLANGE picture.
 
@@ -217,12 +209,6 @@ static void render_line(canvas_closure_t *c, vector_t j, vector_t k)
   graphics_line(r->g, newStart, newEnd);
 }
 
-static void render_poly_begin(canvas_closure_t *c, double red, double gre, double blu) {
-  fprintf(c->r->g->outf,
-    "<polygon fill=\"rgb(%d, %d, %d)\" stroke=\"none\" points=\"",
-    (int)red, (int)gre, (int)blu);
-}
-
 static void render_poly_emit_point(canvas_closure_t *c, vector_t v) {
   render_t *r = c->r;
   // transformed origin and radius using render vectors
@@ -231,12 +217,7 @@ static void render_poly_emit_point(canvas_closure_t *c, vector_t v) {
     vec_scale(r->left, v.y / c->height)
   );
 
-  fprintf(c->r->g->outf,
-    "%.3lf,%.3lf ", coord.x, coord.y);
-}
-
-static void render_poly_end(canvas_closure_t *c) {
-  fprintf(c->r->g->outf, "\" />\n");
+  graphics_poly_emit_point(c->r->g, coord);
 }
 
 static int render_shape(canvas_closure_t *c, value_t *shape)
@@ -317,7 +298,7 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
       gre = num_val((value_t*)list_nth(tup_colour, 1));
       blu = num_val((value_t*)list_nth(tup_colour, 2));
 
-      render_poly_begin(c, red, gre, blu);
+      graphics_poly_begin(c->r->g, red, gre, blu);
 
       // WTFlan. Dark magic inside this loop.
       value_t *v = list_nth((list_t*)datacons_params(shape), 1);
@@ -334,7 +315,7 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
         v = thunk_force(list_nth(datacons_params(v), 1));
       }
 
-      render_poly_end(c);
+      graphics_poly_end(c->r->g);
     } else {
       printf("render_shape: unknown shape.\n");
       print_value(stdout, shape);
