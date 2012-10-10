@@ -1,26 +1,44 @@
+-- Evgeny Martynov, evgenym@cse
+-- Competition submission (part 1) for 1927 asst2, 2012s2
+
+-- Description: Draws a Sierpinski triangle with gradient colouring.
+-- Does not use many functional paradigms, but uses a fair bit of FLan
+-- combinators.
+--
+-- Requires Evgeny's modified (non-standard) flange.c for colour.
+------------------------------------------------------------------------
+
+-- Centers a picture by squeezing it between empty canvas
 centerHor :: Num -> Picture -> Picture
 centerHor r pic =
     Beside (r/2) (r/2 + 1)
         Empty
         (Beside 1 (r/2) pic Empty);
 
+
+-- Calculates non-negative integer powers of a number
 pow :: Num -> Num -> Num
 pow r p = if (p == 0)
             then 1
             else r * (pow r (p-1))
           end;
 
+-- Absolute value
 abs :: Num -> Num
 abs x = if x < 0 then 0-x else x end;
 
+
+-- The actual Sierpinski triangle generator
 sierpinski :: Picture
 sierpinski = let
     threshold :: Num
-    threshold = 5;
+    threshold = 6;
 
+    -- Number of triangles on the very bottom row
     sidelength :: Num
     sidelength = pow 2 threshold;
 
+    -- Makes a triangle
     triangle :: Picture
     triangle = Canvas 1 1
         [ Line (0, 0)   (0.5, 1)
@@ -28,18 +46,20 @@ sierpinski = let
         , Line (1, 0)   (0, 0)
         ];
 
+    -- Drawing logic
     auxSier :: Num -> Num -> Num -> Num -> Picture
     auxSier level x y width = if level == threshold
+        -- We are done recursing
         then Canvas 1 1 [
                 FilledPolygon
                     ( 256 - (abs (sidelength/2 - x) + abs (sidelength - y)) * 256 / 1.5 /sidelength
                     , 256 - ((sidelength-x) + 0.5*y) * 256/(sidelength)
                     , 256 - (x + 0.5*y) * 256/(sidelength)
                     )
-
                     [ (0, 0), (0.5, 1), (1, 0) ]
             ]
         else
+            -- We need to go deeper
             Above 1 1
                 (centerHor 1 (auxSier (level+1) (x+width/4) (y+width/2) (width/2) ) )
                 (Beside 1 1

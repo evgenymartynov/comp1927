@@ -1,3 +1,22 @@
+-- Evgeny Martynov, evgenym@cse
+-- Competition submission (part 2) for 1927 asst2, 2012s2
+
+-- Description: Draws 4 fractals:
+--   * 2 different Julia sets
+--   * 1 Mandelbrot set
+--   * 1 Koch snowflake
+--
+-- This does not use many of FLan's combinators, but instead we use
+-- functional paradigms and tricks.
+-- For example, we use currying to specify different Julia sets with
+-- just one base function.
+-- We also pass functions into a fairly generic drawFractal procedure,
+-- and use those to define Julia set fractals.
+--
+-- Requires Evgeny's modified (non-standard) flange.c for colour.
+------------------------------------------------------------------------
+
+-- Arranges 4 pictures in a grid
 displayFour :: Picture -> Picture -> Picture -> Picture -> Picture
 displayFour a b c d =
     Above 1 1
@@ -5,31 +24,30 @@ displayFour a b c d =
     (Beside 1 1 c d)
 ;
 
-polyline :: [(Num, Num)] -> [Shape]
-polyline list = let
-    aux :: (Num, Num) -> [(Num, Num)] -> [Shape]
-    aux prev list = match list with
-        []   -> []
-    |   x:xs -> (Line prev x):(aux x xs)
-    end;
-in match list with
-    x:xs -> aux x xs
-end;
-
+-- Overlays a list of pictures
 overlayList :: [Picture] -> Picture
 overlayList pics = match pics with
     []   -> Empty
 |   x:xs -> Overlay x (overlayList xs)
 end;
 
+-- Draws the Koch Snowflake.
+-- This is drastically different from the Julia/Mandelbrot fractals.
 koch :: Num -> Picture
 koch zlevel = let
     aux :: Num -> Num -> Num -> Num -> Num -> Picture
     aux zoom sx sy ex ey = let
-        hsqr    :: Num hsqr    = 0.866025404; -- sqrt(3)/2; used in poor-man's trig
         dx :: Num dx = ex-sx;
         dy :: Num dy = ey-sy;
 
+        -- We *could* use rotations and picture-composition in FLan,
+        -- but I could not get the rotations to work in a way that makes
+        -- a proper Koch snowflake.
+
+        -- We resort to doing trig by hand... and calculating each line
+        -- segment by hand.
+
+        hsqr    :: Num hsqr    = 0.866025404; -- sqrt(3)/2
         firstx  :: Num firstx  = (2*sx+ex)/3;
         firsty  :: Num firsty  = (2*sy+ey)/3;
         secondx :: Num secondx = (sx+2*ex)/3;
@@ -54,6 +72,10 @@ in overlayList
     , (aux zlevel 85 70 50 9.3782)
     ];
 
+
+-- This is a Julia-family fractal generator.
+-- Takes in two functions which describe how we check the (x,y) pairs
+-- for convergence.
 drawFractal ::
     (Num -> Num -> Num -> Num -> Num) ->
     (Num -> Num -> Num -> Num -> Num) ->
@@ -65,6 +87,7 @@ drawFractal xGenerator yGenerator cx cy zoomWidth = let
     colscale :: Num
     colscale = 256 / maxIter;
 
+    -- Checks convergence of a point, i.e. does it belong to the set?
     numIterations :: Num -> Num -> Num
     numIterations px py = let
         auxConverges :: Num -> Num -> Num -> Num
@@ -79,6 +102,7 @@ drawFractal xGenerator yGenerator cx cy zoomWidth = let
             end;
     in auxConverges px py 0;
 
+    -- Converts the #iterations to some colour.
     colours :: Num -> (Num, Num, Num)
     colours n =
         ( ((n * colscale) * 1 % 256)
@@ -86,6 +110,7 @@ drawFractal xGenerator yGenerator cx cy zoomWidth = let
         , ((n * colscale) * 2 % 256)
         );
 
+    -- Draws a filled rectangle based on whether a given point converges
     polyOrEmpty :: [(Num, Num)] -> Num -> Num -> Picture
     polyOrEmpty points x y =
         if (numIterations x y) < maxIter then
@@ -96,27 +121,11 @@ drawFractal xGenerator yGenerator cx cy zoomWidth = let
             Empty
         end;
 
-    triangleUp :: Num -> Num -> Num -> Num -> Picture
-    triangleUp x1 y1 x2 y2 =
-        polyOrEmpty
-            [ (0, 0) , (0, 100) , (100, 100) ]
-            ((x1+x2+x1)/3)
-            ((y1+y2+y2)/3);
-
-    triangleDown :: Num -> Num -> Num -> Num -> Picture
-    triangleDown x1 y1 x2 y2 =
-        polyOrEmpty
-            [ (0, 0) , (100, 0) , (100, 100) ]
-            ((x1+x2+x2)/3)
-            ((y1+y2+y1)/3);
-
+    -- We recursively subdivide the region into 4, and combine them.
     auxDraw :: Num -> Num -> Num -> Num -> Num -> Picture
     auxDraw x1 x2 y1 y2 depth =
         if depth == 0 then
             polyOrEmpty [(0, 0), (100, 0), (100, 100), (0, 100)] x1 y2
-            --Overlay
-            --    (triangleUp   x1 y1 x2 y2)
-            --    (triangleDown x1 y1 x2 y2)
         else
             displayFour
                 (auxDraw x1 (x1 + (x2-x1)/2)   y1 (y1 + (y2-y1)/2) (depth-1) )
@@ -128,38 +137,32 @@ drawFractal xGenerator yGenerator cx cy zoomWidth = let
 in auxDraw (cx-zoomWidth) (cx+zoomWidth) (cy-zoomWidth) (cy+zoomWidth) 6;
 
 
-julia :: Picture
-julia = let
-    juliaXStep :: Num -> Num -> Num -> Num -> Num
-    juliaXStep x y px py = (x*x - y*y + (0-0.8));
-    juliaYStep :: Num -> Num -> Num -> Num -> Num
-    juliaYStep x y px py = (2*y*x + (0.156));
-in drawFractal juliaXStep juliaYStep 0 0 0.5;
+-- These determine the iterating/step functions of the Julia sets
+juliaStepX :: Num -> Num -> Num -> Num -> Num -> Num
+juliaStepX addX x y px py = (x*x - y*y + addX);
+juliaStepY :: Num -> Num -> Num -> Num -> Num -> Num
+juliaStepY addY x y px py = (2*x*y + addY);
 
-julia2 :: Picture
-julia2 = let
-    julia2XStep :: Num -> Num -> Num -> Num -> Num
-    julia2XStep x y px py = (x*x - y*y + (0-0.4));
-    julia2YStep :: Num -> Num -> Num -> Num -> Num
-    julia2YStep x y px py = (2*y*x + (0.6));
-in drawFractal julia2XStep julia2YStep (0-0.335) 0.35 0.20;
 
-julia3 :: Picture
-julia3 = let
-    julia3XStep :: Num -> Num -> Num -> Num -> Num
-    julia3XStep x y px py = (x*x - y*y + (0.285));
-    julia3YStep :: Num -> Num -> Num -> Num -> Num
-    julia3YStep x y px py = (2*y*x + (0.01));
-in drawFractal julia3XStep julia3YStep (0-0.6) (0-0.3) 0.25;
+-- These define the fractals themselves.
+-- We curry juliaStepXY functions ^_^
+juliaOne :: Picture
+juliaOne = drawFractal (juliaStepX (0-0.8)) (juliaStepY 0.156) 0 0 0.5;
 
-mandel :: Picture
-mandel = let
+juliaTwo :: Picture
+juliaTwo = drawFractal (juliaStepX 0.285) (juliaStepY 0.01) (0-0.6) (0-0.3) 0.25;
+
+-- Mandelbrot is a bit different to Julia sets.
+mandelbrot :: Picture
+mandelbrot = let
     mandelXStep :: Num -> Num -> Num -> Num -> Num
     mandelXStep x y px py = (x*x - y*y + px);
     mandelYStep :: Num -> Num -> Num -> Num -> Num
     mandelYStep x y px py = (2*y*x     + py);
 in drawFractal mandelXStep mandelYStep (0-0.745) 0.15 0.005;
 
+
+-- And this one composes all four.
 main = displayFour
-    julia (koch 5)
-    mandel julia3
+    juliaOne   (koch 5)
+    mandelbrot juliaTwo
