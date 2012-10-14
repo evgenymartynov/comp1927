@@ -207,6 +207,16 @@ static void render_line(canvas_closure_t *c, vector_t j, vector_t k)
   graphics_line(r->g, newStart, newEnd);
 }
 
+
+// Extracts a datacons two-tuple into a vector.
+static vector_t extract_vector(value_t *tuple) {
+  vector_t vector;
+  vector.x = num_val((value_t*)list_nth(tuple_val(tuple), 0));
+  vector.y = num_val((value_t*)list_nth(tuple_val(tuple), 1));
+  return vector;
+}
+
+
 static int render_shape(canvas_closure_t *c, value_t *shape)
 {
   switch (shape->type) {
@@ -224,8 +234,7 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
       value_t *val_rad = list_nth(datacons_params(shape), 1);
 
       // Extract the data
-      center.x = num_val((value_t*)list_nth(tuple_val(val_center), 0));
-      center.y = num_val((value_t*)list_nth(tuple_val(val_center), 1));
+      center = extract_vector(val_center);
       radius = num_val(val_rad);
 
       // And render
@@ -238,14 +247,10 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
       // Grab the datacons
       value_t *val_first = list_nth(datacons_params(shape), 0);
       value_t *val_second = list_nth(datacons_params(shape), 1);
-      list_t *tup_first = tuple_val(val_first);
-      list_t *tup_second = tuple_val(val_second);
 
       // Extract the data
-      start.x = num_val((value_t*)list_nth(tup_first, 0));
-      start.y = num_val((value_t*)list_nth(tup_first, 1));
-      end.x = num_val((value_t*)list_nth(tup_second, 0));
-      end.y = num_val((value_t*)list_nth(tup_second, 1));
+      start = extract_vector(val_first);
+      end   = extract_vector(val_second);
 
       // And render
       render_line(c, start, end);
@@ -255,15 +260,12 @@ static int render_shape(canvas_closure_t *c, value_t *shape)
       // Grab the datacons
       value_t *val_first = list_nth(datacons_params(shape), 0);
       value_t *val_second = list_nth(datacons_params(shape), 1);
-      list_t *tup_first = tuple_val(val_first);
-      list_t *tup_second = tuple_val(val_second);
 
       // Extract the data
-      start.x = num_val((value_t*)list_nth(tup_first, 0));
-      start.y = num_val((value_t*)list_nth(tup_first, 1));
-      end.x = num_val((value_t*)list_nth(tup_second, 0));
-      end.y = num_val((value_t*)list_nth(tup_second, 1));
+      start = extract_vector(val_first);
+      end   = extract_vector(val_second);
 
+      // Work out the other corners
       cornerA.x = start.x;
       cornerA.y = end.y;
       cornerB.x = end.x;
